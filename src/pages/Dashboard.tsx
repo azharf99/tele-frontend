@@ -34,6 +34,9 @@ const Dashboard: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to fetch status', error);
+      // When backend is unreachable, assume it's waiting for OTP setup
+      setStatus('WAITING_OTP');
+      setShowOtpModal(true);
     }
   };
 
