@@ -15,7 +15,7 @@ let failedQueue: Array<{
   reject: (error: unknown) => void;
 }> = [];
 
-const processQueue = (error: unknown, token: string | null = null) => {
+const processQueue = (error: unknown, token: string | undefined = undefined) => {
   failedQueue.forEach(({ resolve, reject }) => {
     if (error) {
       reject(error);
@@ -75,7 +75,7 @@ apiClient.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${access_token}`;
           return apiClient(originalRequest);
         } catch (refreshError) {
-          processQueue(refreshError, null);
+          processQueue(refreshError, undefined);
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
           localStorage.removeItem('user');
