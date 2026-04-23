@@ -3,7 +3,7 @@ import apiClient from '../api/client';
 import type { BidRule, TelegramGroup, TopicInfo } from '../types';
 import toast from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
-import { AlertCircle, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, Plus, Trash2, Edit } from 'lucide-react';
 
 const Rules: React.FC = () => {
   const [rules, setRules] = useState<BidRule[]>([]);
@@ -12,6 +12,8 @@ const Rules: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [loadingTopics, setLoadingTopics] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingRule, setEditingRule] = useState<BidRule | null>(null);
   const { isAdmin } = useAuth();
 
   const [newRule, setNewRule] = useState({
@@ -103,6 +105,30 @@ const Rules: React.FC = () => {
       }
       toast.error('Gagal membuat rule.');
     }
+  };
+
+  const handleUpdateRule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRule) return;
+    
+    try {
+      await apiClient.put(`/api/rules/${editingRule.ID}`, editingRule);
+      toast.success('Rule berhasil diperbarui.');
+      setShowEditModal(false);
+      setEditingRule(null);
+      fetchData();
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 403) {
+        toast.error('Anda tidak punya akses untuk mengupdate rule.');
+        return;
+      }
+      toast.error('Gagal mengupdate rule.');
+    }
+  };
+
+  const handleEditClick = (rule: BidRule) => {
+    setEditingRule({ ...rule });
+    setShowEditModal(true);
   };
 
   const handleDeleteRule = async (id: number) => {
@@ -204,13 +230,22 @@ const Rules: React.FC = () => {
                   <td className="px-4 py-3">{rule.stop_keywords || '-'}</td>
                   {isAdmin && (
                     <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => handleDeleteRule(rule.ID)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50"
-                      >
-                        <Trash2 size={14} />
-                        Delete
-                      </button>
+                      <div className="flex justify-end gap-1">
+                        <button
+                          onClick={() => handleEditClick(rule)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-blue-200 px-2.5 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50"
+                        >
+                          <Edit size={14} />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteRule(rule.ID)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                        >
+                          <Trash2 size={14} />
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -306,6 +341,128 @@ const Rules: React.FC = () => {
                 </button>
                 <button type="submit" className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
                   Simpan Rule
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditModal && editingRule && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-6">
+            <h2 className="mb-1 text-xl font-bold text-slate-900">Edit Rule</h2>
+            <p className="mb-6 text-sm text-slate-500">Perbarui rule yang sudah ada.</p>
+
+            <form onSubmit={handleUpdateRule} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Target Group</label>
+                <select
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  value={editingRule.target_group_id}
+                  onChange={(e) => setEditingRule((prev) => prev ? { ...prev, target_group_id: Number(e.target.value) } : null)}
+                  required
+                >
+                  <option value={0}>Pilih group...</option>
+                  {groups.map((group) => (
+                    <option key={group.id} value={Number(group.id)}>
+                      {group.title} ({group.type}) - {group.id}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Topic</label>
+                <select
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-100"
+                  value={editingRule.topic_id}
+                  onChange={(e) => setEditingRule((prev) => prev ? { ...prev, topic_id: Number(e.target.value) } : null)}
+                  disabled={!isSupergroupSelected || loadingTopics}
+                >
+                  <option value={0}>0 - Global (tanpa topic khusus)</option>
+                  {topics.map((topic) => (
+                    <option key={topic.id} value={topic.id}>
+                      {topic.id} - {topic.title}
+                    </option>
+                  ))}
+                </select>
+                {!isSupergroupSelected && editingRule.target_group_id && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    Group bukan supergroup, topic otomatis global (`topic_id = 0`).
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Keyword</label>
+                <input
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  value={editingRule.keyword}
+                  onChange={(e) => setEditingRule((prev) => prev ? { ...prev, keyword: e.target.value } : null)}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Bid Message</label>
+                <input
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  value={editingRule.bid_message}
+                  onChange={(e) => setEditingRule((prev) => prev ? { ...prev, bid_message: e.target.value } : null)}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Stop Keywords</label>
+                <input
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  value={editingRule.stop_keywords}
+                  onChange={(e) => setEditingRule((prev) => prev ? { ...prev, stop_keywords: e.target.value } : null)}
+                  placeholder="sold, closed"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Status</label>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="is_active"
+                      checked={editingRule.is_active}
+                      onChange={() => setEditingRule((prev) => prev ? { ...prev, is_active: true } : null)}
+                      className="text-blue-600"
+                    />
+                    <span className="text-sm text-slate-700">Active</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="is_active"
+                      checked={!editingRule.is_active}
+                      onChange={() => setEditingRule((prev) => prev ? { ...prev, is_active: false } : null)}
+                      className="text-blue-600"
+                    />
+                    <span className="text-sm text-slate-700">Inactive</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingRule(null);
+                  }}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
+                >
+                  Batal
+                </button>
+                <button type="submit" className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
+                  Update Rule
                 </button>
               </div>
             </form>
