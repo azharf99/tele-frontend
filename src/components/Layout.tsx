@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { 
   LayoutDashboard, 
   List, 
@@ -10,7 +10,8 @@ import {
   X, 
   Bot,
   User as UserIcon,
-  ChevronRight
+  ChevronRight,
+  Settings
 } from 'lucide-react';
 
 const Layout: React.FC = () => {
@@ -80,6 +81,18 @@ const Layout: React.FC = () => {
             >
               <Users size={20} />
               <span className="font-medium">Groups</span>
+              <ChevronRight size={14} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+            </NavLink>
+            <NavLink 
+              to="/profile" 
+              className={({ isActive }) => `
+                flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
+                ${isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
+              `}
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <Settings size={20} />
+              <span className="font-medium">Profile</span>
               <ChevronRight size={14} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
             </NavLink>
           </nav>

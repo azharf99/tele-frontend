@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import apiClient from '../api/client';
 import type { BidRule, TelegramGroup, TopicInfo } from '../types';
 import toast from 'react-hot-toast';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { AlertCircle, Plus, Trash2 } from 'lucide-react';
 
 const Rules: React.FC = () => {
@@ -61,10 +61,10 @@ const Rules: React.FC = () => {
       try {
         const response = await apiClient.get(`/api/groups/${newRule.target_group_id}/topics`);
         setTopics(response.data ?? []);
-      } catch (error: any) {
+      } catch (error: unknown) {
         setTopics([]);
         setNewRule((prev) => ({ ...prev, topic_id: 0 }));
-        if (error?.response?.status === 500) {
+        if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 500) {
           toast.error('Bot belum running. Selesaikan OTP dulu.');
         } else {
           toast.error('Gagal memuat topics.');
@@ -92,8 +92,8 @@ const Rules: React.FC = () => {
         stop_keywords: '',
       });
       fetchData();
-    } catch (error: any) {
-      if (error?.response?.status === 403) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 403) {
         toast.error('Anda tidak punya akses untuk membuat rule.');
         return;
       }
@@ -107,8 +107,8 @@ const Rules: React.FC = () => {
       await apiClient.delete(`/api/rules/${id}`);
       toast.success('Rule berhasil dihapus.');
       fetchData();
-    } catch (error: any) {
-      if (error?.response?.status === 403) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 403) {
         toast.error('Anda tidak punya akses untuk menghapus rule.');
         return;
       }

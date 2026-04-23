@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import apiClient from '../api/client';
 import type { TelegramGroup, TopicInfo } from '../types';
 import toast from 'react-hot-toast';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { Copy, RefreshCcw } from 'lucide-react';
 
 const Groups: React.FC = () => {
@@ -37,11 +37,12 @@ const Groups: React.FC = () => {
     try {
       const response = await apiClient.get(`/api/groups/${groupId}/topics`);
       setTopics(response.data ?? []);
-    } catch (error: any) {
-      setTopics([]);
-      if (error?.response?.status === 500) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 500) {
+        setTopics([]);
         toast.error('Bot belum running. Selesaikan OTP dulu.');
       } else {
+        setTopics([]);
         toast.error('Gagal memuat topics.');
       }
     } finally {
@@ -59,8 +60,8 @@ const Groups: React.FC = () => {
       await apiClient.post('/api/groups/sync');
       toast.success('Sinkronisasi groups berhasil.');
       await fetchGroups();
-    } catch (error: any) {
-      if (error?.response?.status === 403) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 403) {
         toast.error('Anda tidak punya akses untuk sync groups.');
         return;
       }

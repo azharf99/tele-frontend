@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import apiClient from '../api/client';
 import type { BotStatus } from '../types';
 import toast from 'react-hot-toast';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { 
   RefreshCcw, 
   Activity, 
@@ -51,7 +51,7 @@ const Dashboard: React.FC = () => {
       setShowOtpModal(false);
       setOtpCode('');
       fetchStatus();
-    } catch (error: any) {
+    } catch {
       toast.error('Link Failed');
     }
   };
@@ -61,7 +61,7 @@ const Dashboard: React.FC = () => {
     try {
       await apiClient.post('/api/groups/sync');
       toast.success('Sync Complete');
-    } catch (error: any) {
+    } catch {
       toast.error('Sync Error');
     } finally {
       setSyncing(false);

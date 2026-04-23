@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import apiClient from '../api/client';
 import toast from 'react-hot-toast';
 import { LogIn, Bot, ShieldCheck } from 'lucide-react';
@@ -20,7 +20,7 @@ const Login: React.FC = () => {
       login(response.data);
       toast.success('Access granted');
       navigate('/');
-    } catch (error: any) {
+    } catch {
       toast.error('Authentication failed');
     } finally {
       setLoading(false);
