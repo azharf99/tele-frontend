@@ -8,8 +8,8 @@ export interface User {
 }
 
 export interface BidRule {
-  id: number;
-  target_group_id: number; // Changed to number to match API response
+  ID: number; // Backend returns uppercase ID
+  target_group_id: number;
   topic_id: number;
   keyword: string;
   bid_message: string;

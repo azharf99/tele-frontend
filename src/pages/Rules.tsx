@@ -163,8 +163,8 @@ const Rules: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {rules.map((rule) => (
-                <tr key={rule.id}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{rule.id}</td>
+                <tr key={rule.ID}>
+                  <td className="px-4 py-3 font-medium text-slate-900">{rule.ID}</td>
                   <td className="px-4 py-3 font-mono text-xs">{rule.target_group_id}</td>
                   <td className="px-4 py-3">
                     {rule.topic_id === 0 ? (
@@ -205,7 +205,7 @@ const Rules: React.FC = () => {
                   {isAdmin && (
                     <td className="px-4 py-3 text-right">
                       <button
-                        onClick={() => handleDeleteRule(rule.id)}
+                        onClick={() => handleDeleteRule(rule.ID)}
                         className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50"
                       >
                         <Trash2 size={14} />
