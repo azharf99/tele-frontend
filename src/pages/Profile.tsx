@@ -79,7 +79,7 @@ const Profile: React.FC = () => {
         updateData.password = formData.password;
       }
 
-      const response = await apiClient.put('/api/profile', updateData);
+      const response = await apiClient.put('/profile', updateData);
       
       toast.success(response.data.message || 'Profile updated successfully');
 

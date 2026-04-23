@@ -25,7 +25,7 @@ const Dashboard: React.FC = () => {
 
   const fetchStatus = async () => {
     try {
-      const response = await apiClient.get('/api/bot/status');
+      const response = await apiClient.get('/bot/status');
       setStatus(response.data.status);
       if (response.data.status === 'WAITING_OTP') {
         setShowOtpModal(true);
@@ -49,7 +49,7 @@ const Dashboard: React.FC = () => {
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await apiClient.post('/api/bot/otp', { code: otpCode });
+      await apiClient.post('/bot/otp', { code: otpCode });
       toast.success('System Linked');
       setShowOtpModal(false);
       setOtpCode('');
@@ -62,7 +62,7 @@ const Dashboard: React.FC = () => {
   const handleSyncGroups = async () => {
     setSyncing(true);
     try {
-      await apiClient.post('/api/groups/sync');
+      await apiClient.post('/groups/sync');
       toast.success('Sync Complete');
     } catch {
       toast.error('Sync Error');

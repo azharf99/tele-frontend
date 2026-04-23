@@ -23,7 +23,7 @@ const Groups: React.FC = () => {
   const fetchGroups = async () => {
     setLoading(true);
     try {
-      const response = await apiClient.get('/api/groups');
+      const response = await apiClient.get('/groups');
       setGroups(response.data);
     } catch {
       toast.error('Gagal memuat daftar group.');
@@ -57,7 +57,7 @@ const Groups: React.FC = () => {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      await apiClient.post('/api/groups/sync');
+      await apiClient.post('/groups/sync');
       toast.success('Sinkronisasi groups berhasil.');
       await fetchGroups();
     } catch (error: unknown) {

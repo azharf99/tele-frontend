@@ -33,8 +33,8 @@ const Rules: React.FC = () => {
     setLoading(true);
     try {
       const [rulesRes, groupsRes] = await Promise.all([
-        apiClient.get('/api/rules'),
-        apiClient.get('/api/groups'),
+        apiClient.get('/rules'),
+        apiClient.get('/groups'),
       ]);
       setRules(rulesRes.data);
       setGroups(groupsRes.data);
@@ -80,7 +80,7 @@ const Rules: React.FC = () => {
   const handleCreateRule = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await apiClient.post('/api/rules', newRule);
+      await apiClient.post('/rules', newRule);
       toast.success('Rule berhasil dibuat.');
       setShowCreateModal(false);
       setTopics([]);
