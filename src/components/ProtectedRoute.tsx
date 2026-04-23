@@ -8,7 +8,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   // AuthProvider now handles all token validation during initialization
   // We can rely on the isAuthenticated state
   if (!isAuthenticated) {
-    return <Navigate to="/api/login" replace />;
+    return <Navigate to="/login" replace />;
   }
   
   return <>{children}</>;

@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     setUser(null);
-    window.location.href = '/api/login';
+    window.location.href = '/login';
   };
 
   const updateUser = (userData: Partial<User>) => {
