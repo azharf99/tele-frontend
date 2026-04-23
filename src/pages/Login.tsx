@@ -16,7 +16,7 @@ const Login: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await apiClient.post('/login', { email, password });
+      const response = await apiClient.post('/api/login', { email, password });
       login(response.data);
       toast.success('Access granted');
       navigate('/');

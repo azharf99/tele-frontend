@@ -64,7 +64,7 @@ apiClient.interceptors.response.use(
 
       if (refreshToken) {
         try {
-          const response = await axios.post(`${API_BASE_URL}/refresh`, {
+          const response = await axios.post(`${API_BASE_URL}/api/refresh`, {
             refresh_token: refreshToken,
           });
 
@@ -79,8 +79,8 @@ apiClient.interceptors.response.use(
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
           localStorage.removeItem('user');
-          if (window.location.pathname !== '/login') {
-            window.location.href = '/login';
+          if (window.location.pathname !== '/api/login') {
+            window.location.href = '/api/login';
           }
           return Promise.reject(refreshError);
         } finally {
@@ -90,8 +90,8 @@ apiClient.interceptors.response.use(
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
+        if (window.location.pathname !== '/api/login') {
+          window.location.href = '/api/login';
         }
       }
     }
