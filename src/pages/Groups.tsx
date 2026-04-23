@@ -35,7 +35,7 @@ const Groups: React.FC = () => {
   const fetchTopics = async (groupId: string) => {
     setTopicsLoading(true);
     try {
-      const response = await apiClient.get(`/api/groups/${groupId}/topics`);
+      const response = await apiClient.get(`/groups/${groupId}/topics`);
       setTopics(response.data ?? []);
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 500) {

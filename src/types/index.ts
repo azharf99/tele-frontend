@@ -9,7 +9,7 @@ export interface User {
 
 export interface BidRule {
   id: number;
-  target_group_id: string; // Changed to string for consistency with TelegramGroup.id
+  target_group_id: number; // Changed to number to match API response
   topic_id: number;
   keyword: string;
   bid_message: string;

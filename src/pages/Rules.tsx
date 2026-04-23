@@ -15,15 +15,17 @@ const Rules: React.FC = () => {
   const { isAdmin } = useAuth();
 
   const [newRule, setNewRule] = useState({
-    target_group_id: '',
+    target_group_id: 0,
     topic_id: 0,
     keyword: '',
     bid_message: '',
     stop_keywords: '',
+    is_active: true,
+    has_bidded: false,
   });
 
   const selectedGroup = useMemo(
-    () => groups.find((group) => group.id === newRule.target_group_id),
+    () => groups.find((group) => group.id === newRule.target_group_id.toString()),
     [groups, newRule.target_group_id]
   );
 
@@ -59,7 +61,7 @@ const Rules: React.FC = () => {
 
       setLoadingTopics(true);
       try {
-        const response = await apiClient.get(`/api/groups/${newRule.target_group_id}/topics`);
+        const response = await apiClient.get(`/groups/${newRule.target_group_id}/topics`);
         setTopics(response.data ?? []);
       } catch (error: unknown) {
         setTopics([]);
@@ -85,11 +87,13 @@ const Rules: React.FC = () => {
       setShowCreateModal(false);
       setTopics([]);
       setNewRule({
-        target_group_id: '',
+        target_group_id: 0,
         topic_id: 0,
         keyword: '',
         bid_message: '',
         stop_keywords: '',
+        is_active: true,
+        has_bidded: false,
       });
       fetchData();
     } catch (error: unknown) {
@@ -104,7 +108,7 @@ const Rules: React.FC = () => {
   const handleDeleteRule = async (id: number) => {
     if (!window.confirm('Hapus rule ini?')) return;
     try {
-      await apiClient.delete(`/api/rules/${id}`);
+      await apiClient.delete(`/rules/${id}`);
       toast.success('Rule berhasil dihapus.');
       fetchData();
     } catch (error: unknown) {
@@ -175,8 +179,28 @@ const Rules: React.FC = () => {
                   </td>
                   <td className="px-4 py-3">{rule.keyword}</td>
                   <td className="px-4 py-3">{rule.bid_message}</td>
-                  <td className="px-4 py-3">{rule.is_active ? 'true' : 'false'}</td>
-                  <td className="px-4 py-3">{rule.has_bidded ? 'true' : 'false'}</td>
+                  <td className="px-4 py-3">
+                    {rule.is_active ? (
+                      <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700">
+                        Active
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">
+                        Inactive
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {rule.has_bidded ? (
+                      <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-700">
+                        Yes
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700">
+                        No
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">{rule.stop_keywords || '-'}</td>
                   {isAdmin && (
                     <td className="px-4 py-3 text-right">
@@ -208,12 +232,12 @@ const Rules: React.FC = () => {
                 <select
                   className="w-full rounded-lg border border-slate-300 px-3 py-2"
                   value={newRule.target_group_id}
-                  onChange={(e) => setNewRule((prev) => ({ ...prev, target_group_id: e.target.value }))}
+                  onChange={(e) => setNewRule((prev) => ({ ...prev, target_group_id: Number(e.target.value) }))}
                   required
                 >
-                  <option value="">Pilih group...</option>
+                  <option value={0}>Pilih group...</option>
                   {groups.map((group) => (
-                    <option key={group.id} value={group.id}>
+                    <option key={group.id} value={Number(group.id)}>
                       {group.title} ({group.type}) - {group.id}
                     </option>
                   ))}
