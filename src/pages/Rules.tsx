@@ -303,12 +303,16 @@ const Rules: React.FC = () => {
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Keyword</label>
-                <input
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                <textarea
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 h-24 resize-none"
                   value={newRule.keyword}
                   onChange={(e) => setNewRule((prev) => ({ ...prev, keyword: e.target.value }))}
+                  placeholder="Contoh: iphone 13, pa/a, 5 juta"
                   required
                 />
+                <p className="mt-1 text-xs text-slate-500">
+                  * Pisahkan antar kata kunci dengan <b>koma (,)</b>. Semua kata kunci wajib ada di pesan (Logika AND). Mendukung format pola Regex.
+                </p>
               </div>
 
               <div>
@@ -396,12 +400,16 @@ const Rules: React.FC = () => {
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Keyword</label>
-                <input
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                <textarea
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 h-24 resize-none"
                   value={editingRule.keyword}
                   onChange={(e) => setEditingRule((prev) => prev ? { ...prev, keyword: e.target.value } : null)}
+                  placeholder="Contoh: iphone 13, pa/a, 5 juta"
                   required
                 />
+                <p className="mt-1 text-xs text-slate-500">
+                  * Pisahkan antar kata kunci dengan <b>koma (,)</b>. Semua kata kunci wajib ada di pesan (Logika AND). Mendukung format pola Regex.
+                </p>
               </div>
 
               <div>
