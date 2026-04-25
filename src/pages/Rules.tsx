@@ -17,7 +17,7 @@ const Rules: React.FC = () => {
   const { isAdmin } = useAuth();
 
   const [newRule, setNewRule] = useState({
-    target_group_id: 0,
+    target_group_id: '',
     topic_id: 0,
     keyword: '',
     bid_message: '',
@@ -27,11 +27,38 @@ const Rules: React.FC = () => {
   });
 
   const selectedGroup = useMemo(
-    () => groups.find((group) => group.id === newRule.target_group_id.toString()),
+    () => {
+      console.log('=== selectedGroup useMemo called ===');
+      console.log('newRule.target_group_id:', newRule.target_group_id);
+      console.log('groups length:', groups.length);
+      
+      const group = groups.find((group) => {
+        console.log('Comparing:', group.id, 'with', newRule.target_group_id, 'result:', String(group.id) === String(newRule.target_group_id));
+        return String(group.id) === String(newRule.target_group_id);
+      });
+      
+      console.log('Found group:', group);
+      console.log('Group type:', group?.type);
+      console.log('=== end selectedGroup useMemo ===');
+      return group;
+    },
     [groups, newRule.target_group_id]
   );
 
+  const selectedEditGroup = useMemo(
+    () => editingRule ? groups.find((group) => String(group.id) === String(editingRule.target_group_id)) : null,
+    [groups, editingRule?.target_group_id]
+  );
+
   const isSupergroupSelected = selectedGroup?.type === 'supergroup';
+  console.log('isSupergroupSelected:', isSupergroupSelected);
+  const isEditSupergroupSelected = selectedEditGroup?.type === 'supergroup';
+
+  useEffect(() => {
+    console.log('selectedGroup changed:', selectedGroup);
+    console.log('newRule.target_group_id changed:', newRule.target_group_id);
+    console.log('groups changed:', groups.length);
+  }, [selectedGroup, newRule.target_group_id, groups]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -41,6 +68,7 @@ const Rules: React.FC = () => {
         apiClient.get('/groups'),
       ]);
       setRules(rulesRes.data);
+      console.log('Groups data loaded:', groupsRes.data);
       setGroups(groupsRes.data);
     } catch {
       toast.error('Gagal memuat rules/groups.');
@@ -55,7 +83,9 @@ const Rules: React.FC = () => {
 
   useEffect(() => {
     const fetchTopics = async () => {
+      console.log('fetchTopics called:', { target_group_id: newRule.target_group_id, isSupergroupSelected });
       if (!newRule.target_group_id || !isSupergroupSelected) {
+        console.log('Clearing topics - no group or not supergroup');
         setTopics([]);
         setNewRule((prev) => ({ ...prev, topic_id: 0 }));
         return;
@@ -63,9 +93,12 @@ const Rules: React.FC = () => {
 
       setLoadingTopics(true);
       try {
+        console.log('Fetching topics for group:', newRule.target_group_id);
         const response = await apiClient.get(`/groups/${newRule.target_group_id}/topics`);
+        console.log('Topics response:', response.data);
         setTopics(response.data ?? []);
       } catch (error: unknown) {
+        console.error('Error fetching topics:', error);
         setTopics([]);
         setNewRule((prev) => ({ ...prev, topic_id: 0 }));
         if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 500) {
@@ -81,6 +114,38 @@ const Rules: React.FC = () => {
     fetchTopics();
   }, [newRule.target_group_id, isSupergroupSelected]);
 
+  useEffect(() => {
+    const fetchEditTopics = async () => {
+      console.log('fetchEditTopics called:', { target_group_id: editingRule?.target_group_id, isEditSupergroupSelected });
+      if (!editingRule?.target_group_id || !isEditSupergroupSelected) {
+        console.log('Not fetching edit topics - no group or not supergroup');
+        return;
+      }
+
+      setLoadingTopics(true);
+      try {
+        console.log('Fetching edit topics for group:', editingRule.target_group_id);
+        const response = await apiClient.get(`/groups/${editingRule.target_group_id}/topics`);
+        console.log('Edit topics response:', response.data);
+        setTopics(response.data ?? []);
+      } catch (error: unknown) {
+        console.error('Error fetching edit topics:', error);
+        setTopics([]);
+        if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 500) {
+          toast.error('Bot belum running. Selesaikan OTP dulu.');
+        } else {
+          toast.error('Gagal memuat topics.');
+        }
+      } finally {
+        setLoadingTopics(false);
+      }
+    };
+
+    if (showEditModal && editingRule) {
+      fetchEditTopics();
+    }
+  }, [editingRule?.target_group_id, isEditSupergroupSelected, showEditModal]);
+
   const handleCreateRule = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -89,7 +154,7 @@ const Rules: React.FC = () => {
       setShowCreateModal(false);
       setTopics([]);
       setNewRule({
-        target_group_id: 0,
+        target_group_id: '',
         topic_id: 0,
         keyword: '',
         bid_message: '',
@@ -112,7 +177,7 @@ const Rules: React.FC = () => {
     if (!editingRule) return;
     
     try {
-      await apiClient.put(`/api/rules/${editingRule.ID}`, editingRule);
+      await apiClient.put(`/rules/${editingRule.ID}`, editingRule);
       toast.success('Rule berhasil diperbarui.');
       setShowEditModal(false);
       setEditingRule(null);
@@ -267,12 +332,12 @@ const Rules: React.FC = () => {
                 <select
                   className="w-full rounded-lg border border-slate-300 px-3 py-2"
                   value={newRule.target_group_id}
-                  onChange={(e) => setNewRule((prev) => ({ ...prev, target_group_id: Number(e.target.value) }))}
+                  onChange={(e) => setNewRule((prev) => ({ ...prev, target_group_id: e.target.value }))}
                   required
                 >
-                  <option value={0}>Pilih group...</option>
+                  <option value="">Pilih group...</option>
                   {groups.map((group) => (
-                    <option key={group.id} value={Number(group.id)}>
+                    <option key={group.id} value={String(group.id)}>
                       {group.title} ({group.type}) - {group.id}
                     </option>
                   ))}
@@ -364,13 +429,13 @@ const Rules: React.FC = () => {
                 <select
                   className="w-full rounded-lg border border-slate-300 px-3 py-2"
                   value={editingRule.target_group_id}
-                  onChange={(e) => setEditingRule((prev) => prev ? { ...prev, target_group_id: Number(e.target.value) } : null)}
+                  onChange={(e) => setEditingRule((prev) => prev ? { ...prev, target_group_id: e.target.value } : null)}
                   required
                 >
-                  <option value={0}>Pilih group...</option>
+                  <option value="">Pilih group...</option>
                   {groups.map((group) => (
-                    <option key={group.id} value={Number(group.id)}>
-                      {group.title} ({group.type}) - {group.id}
+                    <option key={group.id} value={String(group.id)}>
+                      {group.title} ({group.id})
                     </option>
                   ))}
                 </select>
@@ -382,7 +447,7 @@ const Rules: React.FC = () => {
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-100"
                   value={editingRule.topic_id}
                   onChange={(e) => setEditingRule((prev) => prev ? { ...prev, topic_id: Number(e.target.value) } : null)}
-                  disabled={!isSupergroupSelected || loadingTopics}
+                  disabled={!isEditSupergroupSelected || loadingTopics}
                 >
                   <option value={0}>0 - Global (tanpa topic khusus)</option>
                   {topics.map((topic) => (
@@ -391,7 +456,7 @@ const Rules: React.FC = () => {
                     </option>
                   ))}
                 </select>
-                {!isSupergroupSelected && editingRule.target_group_id && (
+                {!isEditSupergroupSelected && editingRule.target_group_id && (
                   <p className="mt-1 text-xs text-slate-500">
                     Group bukan supergroup, topic otomatis global (`topic_id = 0`).
                   </p>
