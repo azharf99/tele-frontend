@@ -149,7 +149,10 @@ const Rules: React.FC = () => {
   const handleCreateRule = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await apiClient.post('/rules', newRule);
+      await apiClient.post('/rules', {
+        ...newRule,
+        target_group_id: Number(newRule.target_group_id),
+      });
       toast.success('Rule berhasil dibuat.');
       setShowCreateModal(false);
       setTopics([]);
@@ -177,7 +180,10 @@ const Rules: React.FC = () => {
     if (!editingRule) return;
     
     try {
-      await apiClient.put(`/rules/${editingRule.ID}`, editingRule);
+      await apiClient.put(`/rules/${editingRule.ID}`, {
+        ...editingRule,
+        target_group_id: Number(editingRule.target_group_id),
+      });
       toast.success('Rule berhasil diperbarui.');
       setShowEditModal(false);
       setEditingRule(null);
