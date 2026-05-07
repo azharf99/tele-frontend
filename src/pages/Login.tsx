@@ -9,8 +9,14 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('admin@tele-gateway.com');
   const [password, setPassword] = useState('admin123');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +25,7 @@ const Login: React.FC = () => {
       const response = await apiClient.post('/login', { email, password });
       login(response.data);
       toast.success('Access granted');
-      navigate('/');
+      navigate('/dashboard');
     } catch {
       toast.error('Authentication failed');
     } finally {

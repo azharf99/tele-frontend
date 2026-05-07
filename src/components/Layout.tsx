@@ -48,7 +48,8 @@ const Layout: React.FC = () => {
 
           <nav className="flex-1 space-y-1">
             <NavLink 
-              to="/" 
+              to="/dashboard" 
+              end
               className={({ isActive }) => `
                 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
                 ${isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
@@ -60,7 +61,7 @@ const Layout: React.FC = () => {
               <ChevronRight size={14} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
             </NavLink>
             <NavLink 
-              to="/rules" 
+              to="/dashboard/rules" 
               className={({ isActive }) => `
                 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
                 ${isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
@@ -72,7 +73,7 @@ const Layout: React.FC = () => {
               <ChevronRight size={14} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
             </NavLink>
             <NavLink 
-              to="/groups" 
+              to="/dashboard/groups" 
               className={({ isActive }) => `
                 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
                 ${isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
@@ -84,7 +85,7 @@ const Layout: React.FC = () => {
               <ChevronRight size={14} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
             </NavLink>
             <NavLink 
-              to="/profile" 
+              to="/dashboard/profile" 
               className={({ isActive }) => `
                 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
                 ${isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
