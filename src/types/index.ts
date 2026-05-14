@@ -9,7 +9,7 @@ export interface User {
 
 export interface BidRule {
   ID: number; // Backend returns uppercase ID
-  target_group_id: string;
+  target_group_id: number | string;
   topic_id: number;
   keyword: string;
   bid_message: string;

@@ -136,7 +136,7 @@ const Rules: React.FC = () => {
     try {
       await apiClient.post('/rules', {
         ...newRule,
-        target_group_id: String(newRule.target_group_id),
+        target_group_id: Number(newRule.target_group_id),
       });
       toast.success('Rule berhasil dibuat.');
       setShowCreateModal(false);
@@ -168,7 +168,7 @@ const Rules: React.FC = () => {
     try {
       await apiClient.put(`/rules/${editingRule.ID}`, {
         ...editingRule,
-        target_group_id: String(editingRule.target_group_id),
+        target_group_id: Number(editingRule.target_group_id),
       });
       toast.success('Rule diperbarui.');
       setShowEditModal(false);
@@ -208,7 +208,7 @@ const Rules: React.FC = () => {
   const filteredRules = rules.filter(rule => 
     rule.keyword.toLowerCase().includes(searchQuery.toLowerCase()) ||
     rule.bid_message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    rule.target_group_id.includes(searchQuery)
+    String(rule.target_group_id).includes(searchQuery)
   );
 
   return (
