@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import apiClient from '../api/client';
 import toast from 'react-hot-toast';
-import { Mail, Lock, Save, Eye, EyeOff, User as UserIcon } from 'lucide-react';
+import { Mail, Lock, Save, Eye, EyeOff, User as UserIcon, ShieldCheck, ShieldAlert, Key, Fingerprint, RefreshCcw } from 'lucide-react';
 import { AxiosError } from 'axios';
 
 interface ProfileFormData {
@@ -32,21 +32,19 @@ const Profile: React.FC = () => {
   };
 
   const validateForm = (): boolean => {
-    // Check if at least one field is being updated
     if (!formData.name && !formData.password) {
-      toast.error('Please update at least one field (name or password)');
+      toast.error('Update at least one parameter.');
       return false;
     }
 
-    // Validate password if provided
     if (formData.password) {
       if (formData.password.length < 6) {
-        toast.error('Password must be at least 6 characters long');
+        toast.error('Token length insufficient (min 6).');
         return false;
       }
 
       if (formData.password !== formData.confirmPassword) {
-        toast.error('Password and confirm password do not match');
+        toast.error('Token mismatch detected.');
         return false;
       }
     }
@@ -57,9 +55,7 @@ const Profile: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsLoading(true);
 
@@ -75,21 +71,19 @@ const Profile: React.FC = () => {
       }
 
       if (Object.keys(updateData).length === 0) {
-        toast.error('No changes detected');
+        toast.error('No state change detected.');
         setIsLoading(false);
         return;
       }
 
-      const response = await apiClient.put('/profile', updateData);
+      await apiClient.put('/profile', updateData);
       
-      toast.success(response.data.message || 'Profile updated successfully');
+      toast.success('Identity protocols updated.');
 
-      // Update user context with new name if it was changed
       if (updateData.name && user) {
         updateUser({ name: updateData.name });
       }
 
-      // Clear password fields after successful update
       setFormData(prev => ({
         ...prev,
         password: '',
@@ -98,7 +92,7 @@ const Profile: React.FC = () => {
 
     } catch (error: unknown) {
       console.error('Profile update error:', error);
-      let errorMessage = 'Failed to update profile';
+      let errorMessage = 'Protocol update failed.';
       if (error instanceof AxiosError) {
         errorMessage = error.response?.data?.message || errorMessage;
       }
@@ -109,127 +103,160 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Profile Settings</h1>
-          <p className="text-slate-400">Update your account information</p>
-        </div>
+    <div className="space-y-10 animate-in fade-in duration-700">
+      <header>
+        <h1 className="text-4xl font-black tracking-tight mb-2">Operative Profile</h1>
+        <p className="text-muted-foreground font-medium">Manage your identity credentials and security tokens.</p>
+      </header>
 
-        <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 p-8">
-          {/* Current User Info */}
-          <div className="mb-8 p-4 bg-slate-700/30 rounded-xl">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-slate-600 flex items-center justify-center">
-                <UserIcon size={32} className="text-slate-300" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left: Identity Card */}
+        <div className="space-y-8">
+          <div className="bg-card glass border border-border rounded-[3rem] p-10 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:scale-110 transition-transform duration-1000">
+              <Fingerprint size={160} />
+            </div>
+            
+            <div className="relative z-10 flex flex-col items-center text-center">
+              <div className="w-24 h-24 bg-indigo-600 rounded-[2rem] flex items-center justify-center text-white mb-6 shadow-2xl shadow-indigo-600/20 ring-4 ring-indigo-600/10">
+                <UserIcon size={40} />
               </div>
-              <div>
-                <h3 className="text-xl font-semibold text-white">{user?.name}</h3>
-                <p className="text-slate-400">{user?.email}</p>
-                <p className="text-sm text-slate-500 uppercase tracking-wider">{user?.role}</p>
+              <h3 className="text-2xl font-black tracking-tight mb-1">{user?.name}</h3>
+              <p className="text-sm font-medium text-muted-foreground mb-6">{user?.email}</p>
+              
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-indigo-500 text-[10px] font-black uppercase tracking-widest">
+                <ShieldCheck size={12} />
+                Access: {user?.role}
+              </div>
+            </div>
+
+            <div className="mt-10 pt-10 border-t border-border space-y-4 relative z-10">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-muted-foreground uppercase tracking-widest">Node Uptime</span>
+                <span className="font-black">14.2 Days</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-muted-foreground uppercase tracking-widest">Last Access</span>
+                <span className="font-black">Today, 08:42</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-muted-foreground uppercase tracking-widest">IP Verification</span>
+                <span className="font-black text-emerald-500 uppercase">Passed</span>
               </div>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Name Field */}
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-slate-300 mb-2">
-                <UserIcon size={16} className="inline mr-2" />
-                Full Name
-              </label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                placeholder="Enter your full name"
-                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-              />
+          <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden group border-b-8 border-rose-500">
+            <div className="absolute top-0 right-0 p-6 opacity-10">
+              <ShieldAlert size={80} />
             </div>
+            <h4 className="text-sm font-black uppercase tracking-widest mb-4">Security Advisory</h4>
+            <p className="text-xs text-slate-400 leading-relaxed font-medium">Regularly rotating your access tokens is mandatory for maintaining end-to-end community encryption protocols.</p>
+          </div>
+        </div>
 
-            {/* Email Field (Read-only) */}
-            <div>
-              <label className="block text-sm font-medium text-slate-500 mb-2">
-                <Mail size={16} className="inline mr-2" />
-                Email Address (Permanent)
-              </label>
-              <input
-                type="email"
-                value={user?.email || ''}
-                disabled
-                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-slate-500 cursor-not-allowed"
-              />
-            </div>
-
-            {/* Password Field */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
-                <Lock size={16} className="inline mr-2" />
-                New Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  placeholder="Enter new password"
-                  className="w-full px-4 py-3 pr-12 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
+        {/* Right: Form */}
+        <div className="lg:col-span-2">
+          <div className="bg-card border border-border rounded-[3rem] p-10 shadow-xl shadow-slate-200/50 dark:shadow-none relative">
+            <div className="flex items-center gap-4 mb-10">
+              <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-500 ring-1 ring-indigo-500/20">
+                <Key size={24} />
               </div>
-              <p className="mt-1 text-xs text-slate-500">Leave empty to keep current password</p>
+              <div>
+                <h2 className="text-2xl font-black tracking-tight">Identity Modification</h2>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Update Operational Parameters</p>
+              </div>
             </div>
 
-            {/* Confirm Password Field */}
-            {formData.password && (
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-300 mb-2">
-                  <Lock size={16} className="inline mr-2" />
-                  Confirm New Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    placeholder="Confirm new password"
-                    className="w-full px-4 py-3 pr-12 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
-                  >
-                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
+            <form onSubmit={handleSubmit} className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Identity Display Name</label>
+                  <div className="relative group">
+                    <UserIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      placeholder="Display identity..."
+                      className="w-full pl-12 pr-4 py-4 bg-muted border border-border rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 opacity-60">
+                  <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Permanent Hub (Email)</label>
+                  <div className="relative group">
+                    <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="email"
+                      value={user?.email || ''}
+                      disabled
+                      className="w-full pl-12 pr-4 py-4 bg-muted border border-border rounded-2xl cursor-not-allowed font-bold text-sm"
+                    />
+                  </div>
                 </div>
               </div>
-            )}
 
-            {/* Submit Button */}
-            <div className="pt-4">
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800/50 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <Save size={20} />
-                {isLoading ? 'Updating...' : 'Update Profile'}
-              </button>
-            </div>
-          </form>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-border">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">New Access Token</label>
+                  <div className="relative group">
+                    <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="••••••••"
+                      className="w-full pl-12 pr-12 py-4 bg-muted border border-border rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-indigo-500 transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Confirm Token</label>
+                  <div className="relative group">
+                    <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                      placeholder="••••••••"
+                      className="w-full pl-12 pr-12 py-4 bg-muted border border-border rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-indigo-500 transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6">
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full md:w-auto px-12 py-5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-3 active:scale-[0.98] group"
+                >
+                  {isLoading ? <RefreshCcw size={18} className="animate-spin" /> : <Save size={18} className="group-hover:scale-110 transition-transform" />}
+                  <span>Commit Identity Changes</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </div>

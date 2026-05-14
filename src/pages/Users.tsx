@@ -9,12 +9,14 @@ import {
   Edit2,
   Trash2,
   Search,
-  X,
   Mail,
   Lock,
   Shield,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  ShieldCheck,
+  UserCog,
+  ShieldAlert
 } from 'lucide-react';
 
 const Users: React.FC = () => {
@@ -98,11 +100,11 @@ const Users: React.FC = () => {
         if (formData.password) payload.password = formData.password;
 
         await apiClient.put(`/users/${currentUser.id}`, payload);
-        toast.success('User updated successfully');
+        toast.success('User updated');
       } else {
         // Create User
         await apiClient.post('/users', formData);
-        toast.success('User created successfully');
+        toast.success('User created');
       }
       handleCloseModal();
       fetchUsers();
@@ -119,11 +121,11 @@ const Users: React.FC = () => {
   };
 
   const handleDeleteUser = async (id: number) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    if (!window.confirm('Terminate this operator session?')) return;
 
     try {
       await apiClient.delete(`/users/${id}`);
-      toast.success('User deleted successfully');
+      toast.success('User terminated');
       fetchUsers();
     } catch (error: unknown) {
       console.error('Error deleting user:', error);
@@ -137,92 +139,128 @@ const Users: React.FC = () => {
   );
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div className="space-y-8 animate-in fade-in duration-700">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">User Management</h1>
-          <p className="text-slate-400">Manage system access and roles</p>
+          <h1 className="text-4xl font-black tracking-tight mb-2">Operations Center</h1>
+          <p className="text-muted-foreground font-medium">Control node access levels and operative permissions.</p>
         </div>
         <button
           onClick={handleOpenAddModal}
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-all duration-200 shadow-lg shadow-blue-600/20"
+          className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2 group"
         >
-          <UserPlus size={20} />
-          Add New User
+          <UserPlus size={18} className="group-hover:scale-110 transition-transform" />
+          <span>Authorize Operative</span>
         </button>
+      </header>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-card border border-border p-8 rounded-[2rem] flex items-center gap-6">
+          <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-500 ring-1 ring-indigo-500/20">
+            <UsersIcon size={24} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Total Operators</p>
+            <p className="text-3xl font-black tracking-tighter">{users.length}</p>
+          </div>
+        </div>
+        <div className="bg-card border border-border p-8 rounded-[2rem] flex items-center gap-6">
+          <div className="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-500 ring-1 ring-purple-500/20">
+            <ShieldCheck size={24} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Administrative Nodes</p>
+            <p className="text-3xl font-black tracking-tighter">{users.filter(u => u.role === 'Admin').length}</p>
+          </div>
+        </div>
+        <div className="bg-card border border-border p-8 rounded-[2rem] flex items-center gap-6">
+          <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500 ring-1 ring-emerald-500/20">
+            <ShieldAlert size={24} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Active Protocols</p>
+            <p className="text-3xl font-black tracking-tighter">SECURE</p>
+          </div>
+        </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative mb-6">
-        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-        <input
-          type="text"
-          placeholder="Search by name or email..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-        />
-      </div>
+      <div className="bg-card rounded-[2.5rem] border border-border overflow-hidden shadow-xl shadow-slate-200/50 dark:shadow-none">
+        <div className="p-6 border-b border-border bg-muted/30">
+          <div className="relative group max-w-md">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+            <input
+              type="text"
+              placeholder="Search operative identity..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-background border border-border rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-sm"
+            />
+          </div>
+        </div>
 
-      {/* Users Table */}
-      <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-700/50 bg-slate-700/20">
-                <th className="px-6 py-4 text-sm font-semibold text-slate-300 uppercase tracking-wider">ID</th>
-                <th className="px-6 py-4 text-sm font-semibold text-slate-300 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-4 text-sm font-semibold text-slate-300 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-4 text-sm font-semibold text-slate-300 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-4 text-sm font-semibold text-slate-300 uppercase tracking-wider text-right">Actions</th>
+              <tr className="bg-muted/50 border-b border-border">
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">ID</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Operative Identity</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Communication Hub</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Clearance Level</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right">Node Controls</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-700/30">
+            <tbody className="divide-y divide-border">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
-                    <Loader2 className="mx-auto animate-spin text-blue-500 mb-2" size={32} />
-                    <p className="text-slate-400">Loading users...</p>
+                  <td colSpan={5} className="px-6 py-20 text-center">
+                    <Loader2 className="mx-auto animate-spin text-indigo-500 mb-4" size={32} />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Syncing Database...</p>
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
-                    <AlertCircle className="mx-auto text-slate-500 mb-2" size={32} />
-                    <p className="text-slate-400">No users found</p>
+                  <td colSpan={5} className="px-6 py-20 text-center">
+                    <AlertCircle className="mx-auto text-muted-foreground mb-4" size={32} />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">No Operatives Detected</p>
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-slate-700/20 transition-colors group">
-                    <td className="px-6 py-4 text-slate-400 font-mono text-sm">#{user.id}</td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-white">{user.name}</div>
+                  <tr key={user.id} className="hover:bg-muted/30 transition-colors group">
+                    <td className="px-6 py-5 text-muted-foreground font-mono text-xs">#{user.id}</td>
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-600 font-black text-sm border border-indigo-500/20">
+                          {user.name.charAt(0)}
+                        </div>
+                        <div className="font-black text-sm tracking-tight">{user.name}</div>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-400">{user.email}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${user.role === 'Admin'
-                        ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
-                        : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                    <td className="px-6 py-5 text-sm font-medium text-muted-foreground">{user.email}</td>
+                    <td className="px-6 py-5">
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-colors ${user.role === 'Admin'
+                        ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20'
+                        : 'bg-slate-500/10 text-slate-500 border-slate-500/20'
                         }`}>
                         {user.role}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
+                    <td className="px-6 py-5 text-right">
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => handleOpenEditModal(user)}
-                          className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all"
-                          title="Edit User"
+                          className="p-2 text-indigo-500 hover:bg-indigo-500 hover:text-white rounded-xl transition-all"
+                          title="Edit Identity"
                         >
-                          <Edit2 size={18} />
+                          <Edit2 size={16} />
                         </button>
                         <button
                           onClick={() => handleDeleteUser(user.id)}
-                          className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
-                          title="Delete User"
+                          className="p-2 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all"
+                          title="Revoke Access"
                         >
-                          <Trash2 size={18} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
@@ -234,104 +272,103 @@ const Users: React.FC = () => {
         </div>
       </div>
 
-      {/* Add/Edit User Modal */}
+      {/* Authorize Operative Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={handleCloseModal}></div>
-          <div className="relative w-full max-w-lg bg-slate-800 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between p-6 border-b border-slate-700">
-              <h2 className="text-xl font-bold text-white">
-                {isEditing ? 'Edit User' : 'Add New User'}
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={handleCloseModal}></div>
+          <div className="relative w-full max-w-lg bg-card border border-border rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 p-10">
+            <header className="mb-10 text-center">
+              <div className="w-16 h-16 bg-indigo-600/10 rounded-[1.5rem] flex items-center justify-center text-indigo-600 mb-6 mx-auto ring-1 ring-indigo-600/20">
+                <UserCog size={32} />
+              </div>
+              <h2 className="text-3xl font-black tracking-tight mb-2">
+                {isEditing ? 'Modify Clearance' : 'Authorize Identity'}
               </h2>
-              <button onClick={handleCloseModal} className="text-slate-400 hover:text-white transition-colors">
-                <X size={24} />
-              </button>
-            </div>
+              <p className="text-muted-foreground font-medium">Configure operative permissions and node access credentials.</p>
+            </header>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  <UsersIcon size={16} className="inline mr-2" />
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Enter user's full name"
-                  className="w-full px-4 py-2.5 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                />
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Operative Name</label>
+                <div className="relative group">
+                  <UsersIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Full identity name..."
+                    className="w-full pl-12 pr-4 py-4 bg-muted border border-border rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-sm"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  <Mail size={16} className="inline mr-2" />
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                  disabled={isEditing}
-                  placeholder="Enter email address"
-                  className={`w-full px-4 py-2.5 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${isEditing ? 'opacity-50 cursor-not-allowed bg-slate-800' : ''
-                    }`}
-                />
-                {isEditing && (
-                  <p className="mt-1 text-xs text-slate-500">Email cannot be changed</p>
-                )}
+              <div className="space-y-2">
+                <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Communications Channel</label>
+                <div className="relative group">
+                  <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                    disabled={isEditing}
+                    placeholder="operative@node.secure"
+                    className={`w-full pl-12 pr-4 py-4 bg-muted border border-border rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-sm ${isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  <Shield size={16} className="inline mr-2" />
-                  Role
-                </label>
-                <select
-                  name="role"
-                  value={formData.role}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2.5 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
-                >
-                  <option value="Siswa">Siswa</option>
-                  <option value="Admin">Admin</option>
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Clearance Level</label>
+                  <div className="relative group">
+                    <Shield size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+                    <select
+                      name="role"
+                      value={formData.role}
+                      onChange={handleInputChange}
+                      className="w-full pl-12 pr-4 py-4 bg-muted border border-border rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-sm appearance-none"
+                    >
+                      <option value="Siswa">Operative (Siswa)</option>
+                      <option value="Admin">Administrator</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Access Token</label>
+                  <div className="relative group">
+                    <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+                    <input
+                      type="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      required={!isEditing}
+                      placeholder={isEditing ? 'Unchanged' : '••••••••'}
+                      className="w-full pl-12 pr-4 py-4 bg-muted border border-border rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-sm"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  <Lock size={16} className="inline mr-2" />
-                  Password {isEditing && '(Leave blank to keep current)'}
-                </label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required={!isEditing}
-                  placeholder={isEditing ? '••••••••' : 'Enter password'}
-                  className="w-full px-4 py-2.5 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                />
-              </div>
-
-              <div className="pt-4 flex gap-3">
+              <div className="flex gap-4 pt-6">
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="flex-1 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-xl transition-all"
+                  className="flex-1 py-4 bg-muted hover:bg-border text-foreground font-black uppercase tracking-widest text-xs rounded-2xl transition-all"
                 >
-                  Cancel
+                  Terminate
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800/50 text-white font-medium rounded-xl transition-all shadow-lg shadow-blue-600/20"
+                  className="flex-[2] flex items-center justify-center gap-2 py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-black uppercase tracking-widest text-xs rounded-2xl transition-all shadow-xl shadow-indigo-600/20"
                 >
-                  {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : (isEditing ? 'Update User' : 'Create User')}
+                  {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : (isEditing ? 'Update Clearance' : 'Authorize Node')}
                 </button>
               </div>
             </form>

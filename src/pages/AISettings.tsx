@@ -9,7 +9,14 @@ import {
   Info, 
   Clock, 
   MessageSquare,
-  AlertCircle
+  AlertCircle,
+  Cpu,
+  Zap,
+  ShieldCheck,
+  Terminal,
+  BrainCircuit,
+  Settings2,
+  RefreshCcw
 } from 'lucide-react';
 
 const AISettings: React.FC = () => {
@@ -44,10 +51,10 @@ const AISettings: React.FC = () => {
         key: 'system_prompt',
         value: systemPrompt
       });
-      toast.success('System prompt berhasil diperbarui.');
+      toast.success('AI Personality Updated.');
     } catch (error) {
       console.error('Failed to save AI context', error);
-      toast.error('Gagal menyimpan konteks AI.');
+      toast.error('Failed to sync AI context.');
     } finally {
       setSaving(false);
     }
@@ -55,121 +62,153 @@ const AISettings: React.FC = () => {
 
   if (!isAdmin) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
-        <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center">
-          <AlertCircle size={40} />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-8 animate-in fade-in duration-700">
+        <div className="w-24 h-24 bg-rose-500/10 text-rose-500 rounded-[2rem] flex items-center justify-center ring-1 ring-rose-500/20">
+          <AlertCircle size={48} />
         </div>
-        <h1 className="text-2xl font-black text-slate-900">Akses Ditolak</h1>
-        <p className="text-slate-500 max-w-md">Hanya Administrator yang dapat mengakses dan mengelola pengaturan AI.</p>
+        <div>
+          <h1 className="text-3xl font-black tracking-tight mb-2">Access Restricted</h1>
+          <p className="text-muted-foreground max-w-md font-medium">Only higher-level administrators can modify neural network parameters and AI response logic.</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
-      <header>
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight">AI Gateway Configuration</h1>
-        <p className="text-slate-500 font-medium mt-1">Manage Gemini AI personality and response logic for private messages</p>
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h1 className="text-4xl font-black tracking-tight mb-2 text-foreground">AI Nexus Configuration</h1>
+          <p className="text-muted-foreground font-medium">Define the core personality and instructional protocols for the Gemini neural model.</p>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
+          <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
+          <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Model: Gemini 2.0 Pro</span>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         <div className="xl:col-span-2 space-y-8">
-          <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="bg-indigo-50 p-2.5 rounded-xl text-indigo-600">
-                <Sparkles size={22} />
+          {/* Main Prompt Card */}
+          <div className="bg-card glass rounded-[3rem] p-10 border border-border relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:scale-110 transition-transform duration-1000">
+              <BrainCircuit size={200} />
+            </div>
+            
+            <div className="flex items-center gap-4 mb-10 relative z-10">
+              <div className="w-14 h-14 bg-indigo-500/10 rounded-[1.25rem] flex items-center justify-center text-indigo-500 ring-1 ring-indigo-500/20">
+                <Sparkles size={28} />
               </div>
-              <h2 className="text-xl font-black text-slate-900 tracking-tight">System Prompt</h2>
+              <div>
+                <h2 className="text-2xl font-black uppercase tracking-tight">System Personality</h2>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Neural Instruction Set</p>
+              </div>
             </div>
 
             {loading ? (
-              <div className="h-64 flex items-center justify-center">
-                <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+              <div className="h-96 flex flex-col items-center justify-center space-y-4">
+                <Cpu size={48} className="animate-spin text-indigo-500" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Streaming Context...</p>
               </div>
             ) : (
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Instructional Context</label>
+              <div className="space-y-8 relative z-10">
+                <div className="relative group/input">
+                  <div className="absolute top-4 left-4 text-indigo-500/50">
+                    <Terminal size={18} />
+                  </div>
                   <textarea
                     value={systemPrompt}
                     onChange={(e) => setSystemPrompt(e.target.value)}
-                    className="w-full h-80 p-6 bg-slate-50 border-2 border-slate-100 rounded-4xl focus:border-indigo-500 focus:bg-white outline-none transition-all duration-300 text-slate-700 leading-relaxed font-medium"
-                    placeholder="Contoh: Kamu adalah asisten yang ramah dan siap membantu pelanggan..."
+                    className="w-full h-[450px] pl-12 pr-6 py-6 bg-muted border border-border rounded-[2rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all duration-300 font-mono text-sm leading-relaxed"
+                    placeholder="Initialize neural personality here..."
                   />
+                  <div className="absolute bottom-4 right-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                    <Settings2 size={12} />
+                    Context Length: {systemPrompt.length} tokens
+                  </div>
                 </div>
                 
                 <div className="flex justify-end">
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 px-10 rounded-3xl shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-3 active:scale-[0.98] disabled:opacity-60"
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 px-12 rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center gap-3 active:scale-[0.98] disabled:opacity-60 group/btn"
                   >
-                    <Save size={20} />
-                    <span>{saving ? 'SAVING...' : 'SAVE CONFIGURATION'}</span>
+                    {saving ? <RefreshCcw size={20} className="animate-spin" /> : <Save size={20} className="group-hover:scale-110 transition-transform" />}
+                    <span className="uppercase tracking-widest text-sm">Commit to Neural Core</span>
                   </button>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="bg-indigo-50 rounded-[2.5rem] p-10 border border-indigo-100">
-            <div className="flex items-start gap-4">
-              <div className="bg-white p-3 rounded-2xl text-indigo-600 shadow-sm">
-                <Info size={24} />
+          {/* Info Card */}
+          <div className="bg-indigo-600 rounded-[2.5rem] p-10 text-white relative overflow-hidden group shadow-2xl shadow-indigo-600/20">
+            <div className="absolute top-0 right-0 p-8 opacity-20 transform group-hover:rotate-12 transition-transform duration-700">
+              <Info size={120} />
+            </div>
+            <div className="relative z-10 flex gap-6">
+              <div className="bg-white/10 p-4 rounded-2xl h-fit border border-white/10 backdrop-blur-md">
+                <Zap size={24} />
               </div>
               <div>
-                <h3 className="text-lg font-black text-slate-900 mb-2">Pro-tip: Contextual Engineering</h3>
-                <p className="text-slate-600 leading-relaxed font-medium">
-                  Berikan instruksi spesifik mengenai nama bisnis Anda, layanan yang ditawarkan, dan nada bicara yang diinginkan (formal/santai). 
-                  AI akan menggunakan konteks ini untuk menjawab setiap DM yang masuk secara otomatis.
+                <h3 className="text-xl font-black uppercase tracking-tight mb-3">Contextual Engineering</h3>
+                <p className="text-indigo-100 font-medium leading-relaxed max-w-2xl">
+                  Provide specific directives regarding business identity, operational protocols, and preferred linguistic tone. 
+                  The neural core will utilize this instruction set to autonomously orchestrate all incoming communications.
                 </p>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Sidebar Cards */}
         <div className="space-y-8">
-          <div className="bg-slate-900 rounded-[2.5rem] p-10 shadow-2xl shadow-indigo-900/20 text-white border-t-4 border-indigo-500">
-            <div className="flex items-center gap-3 mb-8">
+          <div className="bg-slate-900 rounded-[2.5rem] p-10 shadow-2xl shadow-indigo-900/20 text-white border-b-8 border-indigo-500">
+            <div className="flex items-center gap-3 mb-10">
               <div className="bg-slate-800 p-2.5 rounded-xl text-indigo-400">
                 <Clock size={22} />
               </div>
-              <h2 className="text-xl font-black tracking-tight">Backend Queue</h2>
+              <h2 className="text-xl font-black tracking-tight uppercase">Stream Pipeline</h2>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-8">
               <div className="flex gap-4">
-                <div className="w-1 h-12 bg-indigo-500 rounded-full" />
+                <div className="w-1.5 h-auto bg-gradient-to-b from-indigo-500 to-transparent rounded-full" />
                 <div>
-                  <p className="text-sm font-bold text-indigo-100">1 Minute Debounce</p>
-                  <p className="text-xs text-slate-400 mt-1">Sistem menunggu jeda 1 menit setelah pesan terakhir sebelum merespons.</p>
+                  <p className="text-sm font-black uppercase tracking-widest text-indigo-400 mb-1">Debounce Protocol</p>
+                  <p className="text-xs text-slate-400 leading-relaxed">System introduces a 60-second latency buffer post-message to ensure full conversational capture.</p>
                 </div>
               </div>
               
               <div className="flex gap-4">
-                <div className="w-1 h-12 bg-emerald-500 rounded-full" />
+                <div className="w-1.5 h-auto bg-gradient-to-b from-emerald-500 to-transparent rounded-full" />
                 <div>
-                  <p className="text-sm font-bold text-emerald-100">Batch Processing</p>
-                  <p className="text-xs text-slate-400 mt-1">Maksimal 10 pesan terakhir akan dikirimkan sekaligus ke AI untuk konteks penuh.</p>
+                  <p className="text-sm font-black uppercase tracking-widest text-emerald-400 mb-1">Batch Serialization</p>
+                  <p className="text-xs text-slate-400 leading-relaxed">Automated ingestion of up to 10 historical entries to maximize contextual accuracy.</p>
                 </div>
               </div>
 
-              <div className="pt-4 mt-4 border-t border-slate-800">
-                <div className="flex items-center gap-2 text-indigo-400 mb-2">
+              <div className="pt-8 border-t border-slate-800">
+                <div className="flex items-center gap-2 text-indigo-400 mb-3">
                   <MessageSquare size={16} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Target Channel</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">Execution Channel</span>
                 </div>
-                <p className="text-sm font-bold">Private Chat (DMs Only)</p>
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-white/5">
+                  <span className="text-xs font-bold">Secure Private DM</span>
+                  <ShieldCheck size={16} className="text-emerald-500" />
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-[2.5rem] p-8 shadow-xl shadow-slate-200/50 border border-slate-100 text-center">
-            <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 mx-auto mb-4">
+          <div className="bg-card border border-border rounded-[2.5rem] p-8 text-center relative overflow-hidden group">
+            <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="w-16 h-16 bg-muted rounded-[1.25rem] flex items-center justify-center text-muted-foreground mx-auto mb-6 group-hover:scale-110 transition-transform">
               <Bot size={32} />
             </div>
-            <h4 className="font-black text-slate-900">Gemini 1.5 Flash</h4>
-            <p className="text-xs text-slate-500 mt-1">High-performance AI model enabled</p>
+            <h4 className="font-black text-foreground uppercase tracking-tight">Gemini 1.5 Flash</h4>
+            <p className="text-[10px] text-muted-foreground mt-2 font-black uppercase tracking-widest">High-Efficiency Protocol Enabled</p>
           </div>
         </div>
       </div>

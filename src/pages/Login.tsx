@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import apiClient from '../api/client';
 import toast from 'react-hot-toast';
-import { LogIn, Bot, ShieldCheck } from 'lucide-react';
+import { LogIn, Bot, ShieldCheck, Lock, Mail, ChevronRight } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('admin@tele-gateway.com');
@@ -34,69 +34,90 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-50 px-4">
-      <div className="w-full max-w-[450px]">
+    <div className="flex items-center justify-center min-h-screen bg-slate-950 px-4 relative overflow-hidden">
+      {/* Background Decorative Elements */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/20 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full" />
+      </div>
+
+      <div className="w-full max-w-[480px] z-10">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-indigo-600 rounded-4xl shadow-xl shadow-indigo-200 mb-6 rotate-3">
-            <Bot size={40} className="text-white -rotate-3" />
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-indigo-600 rounded-[2rem] shadow-2xl shadow-indigo-500/40 mb-8 transform hover:rotate-6 transition-transform duration-500">
+            <Bot size={48} className="text-white" />
           </div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Tele-Gateway</h1>
-          <p className="text-slate-500 font-medium">Telegram Auction Automation Suite</p>
+          <h1 className="text-5xl font-black text-white tracking-tighter mb-3">Tele-Gateway</h1>
+          <p className="text-slate-400 font-medium tracking-wide">Secure Auction Automation Node</p>
         </div>
 
-        <div className="bg-white rounded-4xl shadow-2xl shadow-slate-200/60 p-10 border border-slate-100">
+        <div className="bg-white/5 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl p-10 border border-white/10 relative">
+          <div className="absolute -top-px left-20 right-20 h-px bg-gradient-to-r from-transparent via-indigo-500 to-transparent" />
+          
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700 ml-1">Email Address</label>
-              <input
-                type="email"
-                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all duration-200"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@tele-gateway.com"
-                required
-              />
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Identity Terminal</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                  <Mail size={18} className="text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                </div>
+                <input
+                  type="email"
+                  className="w-full pl-12 pr-5 py-4 bg-slate-900/50 border border-slate-800 rounded-2xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all duration-300 text-white placeholder:text-slate-600"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@terminal.access"
+                  required
+                />
+              </div>
             </div>
+
             <div className="space-y-2">
               <div className="flex justify-between items-center ml-1">
-                <label className="text-sm font-bold text-slate-700">Password</label>
-                <a href="#" className="text-xs font-bold text-indigo-600 hover:text-indigo-700">Forgot?</a>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Access Key</label>
+                <a href="#" className="text-[10px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-tighter">Request Recovery</a>
               </div>
-              <input
-                type="password"
-                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all duration-200"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-              />
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                  <Lock size={18} className="text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                </div>
+                <input
+                  type="password"
+                  className="w-full pl-12 pr-5 py-4 bg-slate-900/50 border border-slate-800 rounded-2xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all duration-300 text-white placeholder:text-slate-600"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
             </div>
+
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-5 rounded-2xl shadow-lg shadow-slate-200 transition-all duration-200 flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-70"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-2xl shadow-xl shadow-indigo-600/20 transition-all duration-300 flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-70 group"
             >
               {loading ? (
                 <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
                   <LogIn size={20} />
-                  <span>Sign In</span>
+                  <span className="uppercase tracking-widest text-sm">Initialize Session</span>
+                  <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-10 pt-8 border-t border-slate-50">
-            <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">
+          <div className="mt-10 pt-8 border-t border-white/5">
+            <div className="flex items-center justify-center gap-2 text-[10px] text-slate-500 font-black uppercase tracking-[0.3em]">
               <ShieldCheck size={14} className="text-indigo-500" />
-              Secure Control Node
+              End-to-End Encrypted Access
             </div>
           </div>
         </div>
         
-        <p className="text-center mt-10 text-slate-400 text-sm font-medium">
-          Protected by end-to-end encryption.
+        <p className="text-center mt-10 text-slate-500 text-xs font-medium tracking-wide">
+          Protected by <span className="text-slate-300">Tele-Gateway Quantum</span> security protocols.
         </p>
       </div>
     </div>

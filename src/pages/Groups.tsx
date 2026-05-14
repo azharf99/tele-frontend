@@ -3,7 +3,18 @@ import apiClient from '../api/client';
 import type { TelegramGroup, TopicInfo } from '../types';
 import toast from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
-import { Copy, RefreshCcw } from 'lucide-react';
+import { 
+  Copy, 
+  RefreshCcw, 
+  Search, 
+  Hash, 
+  Globe, 
+  ChevronRight, 
+  Layers,
+  Info,
+  ShieldCheck,
+  Bot
+} from 'lucide-react';
 
 const Groups: React.FC = () => {
   const [groups, setGroups] = useState<TelegramGroup[]>([]);
@@ -38,11 +49,11 @@ const Groups: React.FC = () => {
       const response = await apiClient.get(`/groups/${groupId}/topics`);
       setTopics(response.data ?? []);
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 500) {
-        setTopics([]);
+      setTopics([]);
+      const axiosError = error as { response?: { status: number } };
+      if (axiosError?.response?.status === 500) {
         toast.error('Bot belum running. Selesaikan OTP dulu.');
       } else {
-        setTopics([]);
         toast.error('Gagal memuat topics.');
       }
     } finally {
@@ -58,14 +69,15 @@ const Groups: React.FC = () => {
     setSyncing(true);
     try {
       await apiClient.post('/groups/sync');
-      toast.success('Sinkronisasi groups berhasil.');
+      toast.success('Sync success.');
       await fetchGroups();
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 403) {
-        toast.error('Anda tidak punya akses untuk sync groups.');
+      const axiosError = error as { response?: { status: number } };
+      if (axiosError?.response?.status === 403) {
+        toast.error('Akses ditolak.');
         return;
       }
-      toast.error('Sinkronisasi groups gagal.');
+      toast.error('Sync failed.');
     } finally {
       setSyncing(false);
     }
@@ -83,9 +95,9 @@ const Groups: React.FC = () => {
   const copyToClipboard = async (value: string | number, label: string) => {
     try {
       await navigator.clipboard.writeText(String(value));
-      toast.success(`${label} berhasil disalin.`);
+      toast.success(`${label} copied.`);
     } catch {
-      toast.error(`Gagal menyalin ${label}.`);
+      toast.error(`Failed to copy.`);
     }
   };
 
@@ -95,103 +107,197 @@ const Groups: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 animate-in fade-in duration-700">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Group Explorer</h1>
-          <p className="text-slate-500">Pilih supergroup untuk melihat daftar topic dan copy ID dengan cepat.</p>
+          <h1 className="text-4xl font-black tracking-tight mb-2">Group Explorer</h1>
+          <p className="text-muted-foreground font-medium">Investigate and monitor connected Telegram infrastructure.</p>
         </div>
         {isAdmin && (
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2 group"
           >
-            <RefreshCcw size={16} className={syncing ? 'animate-spin' : ''} />
-            {syncing ? 'Sync...' : 'Sync Groups'}
+            <RefreshCcw size={18} className={syncing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'} />
+            <span>{syncing ? 'Syncing...' : 'Sync Groups'}</span>
           </button>
         )}
-      </div>
+      </header>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <input
-            className="mb-4 w-full rounded-lg border border-slate-300 px-3 py-2"
-            placeholder="Cari group berdasarkan title/ID..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
+        {/* Left Column: Group List */}
+        <div className="lg:col-span-5 xl:col-span-4 space-y-6">
+          <div className="relative group">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+            <input 
+              type="text" 
+              placeholder="Search nodes..." 
+              className="w-full pl-12 pr-4 py-4 bg-card border border-border rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
 
-          {loading ? (
-            <p className="py-8 text-center text-slate-500">Memuat groups...</p>
-          ) : filteredGroups.length === 0 ? (
-            <p className="py-8 text-center text-slate-500">Group tidak ditemukan.</p>
-          ) : (
-            <div className="space-y-2">
-              {filteredGroups.map((group) => (
-                <div
-                  key={group.id}
-                  className={`rounded-xl border p-3 ${
-                    selectedGroupId === group.id
-                      ? 'border-indigo-300 bg-indigo-50'
-                      : 'border-slate-200 bg-white hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <button
-                      className="text-left"
-                      onClick={() => handleSelectGroup(group)}
-                      type="button"
-                    >
-                      <p className="font-semibold text-slate-900">{group.title}</p>
-                      <p className="text-xs text-slate-500">{group.type}</p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(group.id, 'ID group')}
-                      className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-100"
-                    >
-                      <Copy size={12} />
-                      Copy ID
-                    </button>
-                  </div>
-                  <p className="mt-2 font-mono text-xs text-slate-600">{group.id}</p>
-                </div>
-              ))}
+          <div className="bg-card border border-border rounded-[2.5rem] overflow-hidden flex flex-col max-h-[600px]">
+            <div className="p-4 bg-muted/30 border-b border-border text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Connected Clusters ({filteredGroups.length})
             </div>
-          )}
+            <div className="overflow-y-auto flex-1 divide-y divide-border">
+              {loading ? (
+                <div className="p-12 text-center space-y-3">
+                  <RefreshCcw size={32} className="animate-spin text-indigo-500 mx-auto" />
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Scanning Network...</p>
+                </div>
+              ) : filteredGroups.length === 0 ? (
+                <div className="p-12 text-center text-muted-foreground">
+                  <p className="font-bold text-sm italic">No nodes detected.</p>
+                </div>
+              ) : (
+                filteredGroups.map((group) => (
+                  <button
+                    key={group.id}
+                    onClick={() => handleSelectGroup(group)}
+                    className={`w-full text-left p-5 transition-all flex items-center gap-4 group/item ${
+                      selectedGroupId === group.id
+                        ? 'bg-indigo-600/5 dark:bg-indigo-600/10'
+                        : 'hover:bg-muted/50'
+                    }`}
+                  >
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors shrink-0 ${
+                      selectedGroupId === group.id
+                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                        : 'bg-muted text-muted-foreground group-hover/item:bg-indigo-100 group-hover/item:text-indigo-600'
+                    }`}>
+                      {group.type === 'supergroup' ? <Layers size={20} /> : <Globe size={20} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className={`font-black text-sm truncate ${selectedGroupId === group.id ? 'text-indigo-600 dark:text-indigo-400' : ''}`}>{group.title}</p>
+                        <ChevronRight size={14} className={`transition-transform ${selectedGroupId === group.id ? 'translate-x-1 text-indigo-500' : 'opacity-0 group-hover/item:opacity-100'}`} />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{group.type}</span>
+                        <span className="text-[8px] font-mono text-muted-foreground truncate">{group.id}</span>
+                      </div>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <h2 className="text-lg font-semibold text-slate-900">Topics</h2>
-          {!selectedGroup ? (
-            <p className="mt-3 text-sm text-slate-500">Pilih group terlebih dahulu.</p>
-          ) : selectedGroup.type !== 'supergroup' ? (
-            <p className="mt-3 text-sm text-slate-500">
-              Group terpilih bukan supergroup. Tidak memiliki daftar topic.
-            </p>
-          ) : topicsLoading ? (
-            <p className="mt-3 text-sm text-slate-500">Memuat topics...</p>
-          ) : topics.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-500">Tidak ada topic pada supergroup ini.</p>
-          ) : (
-            <div className="mt-4 space-y-2">
-              {topics.map((topic) => (
-                <div key={topic.id} className="flex items-center justify-between rounded-lg border border-slate-200 p-3">
-                  <div>
-                    <p className="font-medium text-slate-900">{topic.title}</p>
-                    <p className="font-mono text-xs text-slate-600">{topic.id}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard(topic.id, 'ID topic')}
-                    className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-100"
-                  >
-                    <Copy size={12} />
-                    Copy ID
-                  </button>
+        {/* Right Column: Node Details */}
+        <div className="lg:col-span-7 xl:col-span-8">
+          {selectedGroup ? (
+            <div className="space-y-8 animate-in slide-in-from-right-4 duration-500">
+              {/* Header Info */}
+              <div className="bg-indigo-600 rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl shadow-indigo-600/20">
+                <div className="absolute top-0 right-0 p-12 opacity-10 transform rotate-12 scale-150">
+                  <Bot size={200} />
                 </div>
-              ))}
+                <div className="relative z-10">
+                  <div className="flex flex-wrap items-start justify-between gap-6 mb-10">
+                    <div className="space-y-2">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full border border-white/10 text-[10px] font-black uppercase tracking-[0.2em]">
+                        <ShieldCheck size={12} />
+                        Identity Verified
+                      </div>
+                      <h2 className="text-4xl font-black tracking-tighter">{selectedGroup.title}</h2>
+                      <div className="flex items-center gap-3 font-mono text-sm text-indigo-100/70">
+                        <span>{selectedGroup.id}</span>
+                        <button 
+                          onClick={() => copyToClipboard(selectedGroup.id, 'Group ID')}
+                          className="p-1 hover:bg-white/10 rounded-md transition-colors"
+                        >
+                          <Copy size={14} />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/10">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 opacity-60">Status</p>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                        <span className="text-sm font-black uppercase tracking-widest">Connected</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                      <p className="text-[8px] font-black uppercase tracking-[0.2em] mb-1 opacity-50">Type</p>
+                      <p className="font-bold text-sm uppercase">{selectedGroup.type}</p>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                      <p className="text-[8px] font-black uppercase tracking-[0.2em] mb-1 opacity-50">Protocol</p>
+                      <p className="font-bold text-sm uppercase">MTProto v2.0</p>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                      <p className="text-[8px] font-black uppercase tracking-[0.2em] mb-1 opacity-50">Access Level</p>
+                      <p className="font-bold text-sm uppercase">{isAdmin ? 'FULL ADMIN' : 'RESTRICTED'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Topics Section */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between px-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-500">
+                      <Hash size={20} />
+                    </div>
+                    <h3 className="text-xl font-black tracking-tight">Stream Partitions (Topics)</h3>
+                  </div>
+                  {topics.length > 0 && (
+                    <span className="bg-muted px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{topics.length} Detected</span>
+                  )}
+                </div>
+
+                {selectedGroup.type !== 'supergroup' ? (
+                  <div className="p-12 bg-card border border-border border-dashed rounded-[2.5rem] text-center">
+                    <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center text-muted-foreground mx-auto mb-6">
+                      <Info size={32} />
+                    </div>
+                    <p className="text-sm font-bold text-muted-foreground max-w-xs mx-auto italic">This node is a standard group and does not support multi-stream partitioning (Topics).</p>
+                  </div>
+                ) : topicsLoading ? (
+                  <div className="py-20 text-center space-y-4">
+                    <RefreshCcw size={32} className="animate-spin text-indigo-500 mx-auto" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Mapping Sub-streams...</p>
+                  </div>
+                ) : topics.length === 0 ? (
+                  <div className="p-12 bg-card border border-border border-dashed rounded-[2.5rem] text-center">
+                    <p className="text-sm font-bold text-muted-foreground italic">No active sub-streams (Topics) found for this cluster.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {topics.map((topic) => (
+                      <div key={topic.id} className="bg-card border border-border p-6 rounded-[2rem] hover:border-indigo-500/30 transition-all group/topic flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black text-sm mb-1 truncate group-hover/topic:text-indigo-500 transition-colors">{topic.title}</p>
+                          <p className="font-mono text-[10px] text-muted-foreground">ID: {topic.id}</p>
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(topic.id, 'Topic ID')}
+                          className="w-10 h-10 bg-muted text-muted-foreground rounded-xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                        >
+                          <Copy size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="h-full min-h-[500px] bg-card border border-border border-dashed rounded-[3rem] flex flex-col items-center justify-center text-center px-10">
+              <div className="w-24 h-24 bg-muted rounded-[2.5rem] flex items-center justify-center text-muted-foreground mb-8">
+                <Globe size={48} className="animate-pulse" />
+              </div>
+              <h3 className="text-2xl font-black mb-3">No Node Selected</h3>
+              <p className="text-muted-foreground max-w-md font-medium">Initialize a session by selecting a cluster from the exploration terminal on the left to investigate its internal architecture.</p>
             </div>
           )}
         </div>

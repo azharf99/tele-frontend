@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import apiClient from '../api/client';
 import type { BotStatus } from '../types';
 import toast from 'react-hot-toast';
-import { useAuth } from '../hooks/useAuth';
 import { 
   RefreshCcw, 
   Activity, 
@@ -11,9 +10,16 @@ import {
   Pause, 
   Key,
   Smartphone,
-  CheckCircle2,
   Zap,
-  Cpu
+  Cpu,
+  Server,
+  Network,
+  Clock,
+  ChevronRight,
+  ArrowUpRight,
+  ArrowDownRight,
+  List,
+  ShieldCheck
 } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
@@ -21,7 +27,6 @@ const Dashboard: React.FC = () => {
   const [otpCode, setOtpCode] = useState('');
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const { isAdmin, user } = useAuth();
 
   const fetchStatus = async () => {
     try {
@@ -34,7 +39,6 @@ const Dashboard: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to fetch status', error);
-      // When backend is unreachable, assume it's waiting for OTP setup
       setStatus('WAITING_OTP');
       setShowOtpModal(true);
     }
@@ -72,200 +76,197 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
-      <header>
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight">System Console</h1>
-        <p className="text-slate-500 font-medium mt-1">Real-time infrastructure and bot orchestration</p>
+    <div className="space-y-10 animate-in fade-in duration-700">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h1 className="text-4xl font-black tracking-tight mb-2">System Console</h1>
+          <p className="text-muted-foreground font-medium">Infrastructure monitoring and bot orchestration terminal.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={handleSyncGroups}
+            disabled={syncing}
+            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2 group"
+          >
+            {syncing ? <RefreshCcw size={16} className="animate-spin" /> : <RefreshCcw size={16} className="group-hover:rotate-180 transition-transform duration-500" />}
+            <span>Sync Network</span>
+          </button>
+        </div>
       </header>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="xl:col-span-2 space-y-8">
-          {/* Status Panel */}
-          <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-110 transition-transform duration-500">
-              <Cpu size={120} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Core Status Panel */}
+        <div className="lg:col-span-2 relative group">
+          <div className="absolute inset-0 bg-indigo-500/5 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="bg-card glass rounded-[2.5rem] p-10 border border-border relative overflow-hidden h-full">
+            <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:scale-110 transition-transform duration-1000">
+              <Cpu size={180} />
             </div>
             
-            <div className="flex justify-between items-center mb-10 relative z-10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
-                  <Activity size={20} />
-                </div>
-                <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Core Status</h2>
-              </div>
-              <button 
-                onClick={fetchStatus} 
-                className="w-10 h-10 bg-slate-50 hover:bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 transition-colors"
-              >
-                <RefreshCcw size={18} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
-              <div className="bg-slate-900 rounded-4xl p-8 flex items-center gap-6 shadow-xl shadow-slate-900/10">
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
-                  status === 'RUNNING' ? 'bg-emerald-500 text-slate-900 shadow-lg shadow-emerald-500/20' :
-                  status === 'WAITING_OTP' ? 'bg-amber-400 text-slate-900 shadow-lg shadow-amber-400/20' :
-                  'bg-rose-500 text-white shadow-lg shadow-rose-500/20'
-                }`}>
-                  {status === 'RUNNING' ? <Zap size={28} fill="currentColor" /> : 
-                   status === 'WAITING_OTP' ? <Key size={28} /> : 
-                   <Pause size={28} fill="currentColor" />}
+            <div className="flex justify-between items-start mb-12 relative z-10">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-500 ring-1 ring-indigo-500/20">
+                  <Activity size={28} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Active State</p>
+                  <h2 className="text-2xl font-black uppercase tracking-tight">Core Status</h2>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Real-time Node Health</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Active</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
+              <div className="space-y-6">
+                <div>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-3">Operating Mode</p>
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl font-black text-white">{status.replace('_', ' ')}</span>
-                    {status === 'RUNNING' && <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />}
+                    <span className={`text-4xl font-black tracking-tighter ${status === 'RUNNING' ? 'text-indigo-500' : 'text-amber-500'}`}>
+                      {status}
+                    </span>
+                    {status === 'RUNNING' ? <Zap size={24} className="text-indigo-500 animate-pulse" /> : <Pause size={24} className="text-amber-500" />}
+                  </div>
+                </div>
+                
+                <div className="pt-4 border-t border-border/50">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4">Uptime Metrics</p>
+                  <div className="flex items-center gap-6">
+                    <div>
+                      <p className="text-2xl font-black tracking-tight">14d 6h</p>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Total Active</p>
+                    </div>
+                    <div className="w-px h-8 bg-border" />
+                    <div>
+                      <p className="text-2xl font-black tracking-tight">99.98%</p>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Reliability</p>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-slate-50 rounded-4xl p-8 border border-slate-200/60">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Node Health</p>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-bold text-slate-600">Telegram Cluster</span>
-                    <span className="text-[10px] font-black text-emerald-600 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-200">ONLINE</span>
+              <div className="bg-slate-900/40 rounded-3xl p-6 border border-white/5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Server size={16} className="text-slate-500" />
+                    <span className="text-xs font-bold text-slate-400">Node Latency</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-bold text-slate-600">Event Listener</span>
-                    <span className="text-[10px] font-black text-emerald-600 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-200">STABLE</span>
-                  </div>
+                  <span className="text-xs font-black text-indigo-400">14ms</span>
                 </div>
-              </div>
-            </div>
-
-            <div className={`mt-10 p-5 rounded-2xl flex gap-4 border transition-colors ${
-              status === 'RUNNING' ? 'bg-indigo-50 border-indigo-100 text-indigo-700' :
-              status === 'WAITING_OTP' ? 'bg-amber-50 border-amber-100 text-amber-700' :
-              'bg-slate-100 border-slate-200 text-slate-600'
-            }`}>
-              <ShieldAlert className="shrink-0" size={24} />
-              <div className="text-sm font-bold leading-relaxed">
-                {status === 'RUNNING' ? 'System fully authorized. Real-time keyword monitors are synchronized across all target nodes.' :
-                 status === 'WAITING_OTP' ? 'External authorization required. Telegram cloud instance is awaiting secure verification code.' :
-                 'Infrastructure dormant. Active bidding services are offline until the core engine is re-engaged.'}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white p-8 rounded-4xl shadow-xl shadow-slate-200/50 border border-slate-100 flex items-center justify-between group cursor-default">
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Capture Count</p>
-                <p className="text-4xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors">128</p>
-              </div>
-              <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
-                <CheckCircle2 size={32} />
-              </div>
-            </div>
-            <div className="bg-white p-8 rounded-4xl shadow-xl shadow-slate-200/50 border border-slate-100 flex items-center justify-between group cursor-default">
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Connected Channels</p>
-                <p className="text-4xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors">4</p>
-              </div>
-              <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
-                <Activity size={32} />
+                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-indigo-500 h-full w-[85%] rounded-full shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
+                </div>
+                
+                <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center gap-2">
+                    <Network size={16} className="text-slate-500" />
+                    <span className="text-xs font-bold text-slate-400">Memory Load</span>
+                  </div>
+                  <span className="text-xs font-black text-indigo-400">42%</span>
+                </div>
+                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-indigo-500 h-full w-[42%] rounded-full shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Action Panel */}
-        <div className="space-y-8">
-          <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl shadow-slate-200/50 border border-slate-100">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="bg-slate-900 p-2.5 rounded-xl text-white">
-                <Settings size={22} />
-              </div>
-              <h2 className="text-xl font-black text-slate-900 tracking-tight">System Controls</h2>
-            </div>
-            
-            <div className="space-y-4">
-              {isAdmin && (
-                <button 
-                  onClick={handleSyncGroups} 
-                  disabled={syncing}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-5 rounded-3xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
-                >
-                  <RefreshCcw className={syncing ? 'animate-spin' : ''} size={20} />
-                  <span>{syncing ? 'RE-SYNCING' : 'FORCE RE-SYNC'}</span>
-                </button>
-              )}
-              <button className="w-full bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-4 rounded-3xl transition-all flex items-center justify-center gap-2">
-                <Activity size={18} />
-                <span>EXPORT TELEMETRY</span>
-              </button>
-              <button className="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 font-black py-4 rounded-3xl transition-all flex items-center justify-center gap-2">
-                <ShieldAlert size={18} />
-                <span>TERMINATE SESSIONS</span>
-              </button>
-            </div>
+        <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white relative overflow-hidden group shadow-2xl shadow-indigo-600/30">
+          <div className="absolute top-0 right-0 p-8 opacity-20 transform group-hover:rotate-12 transition-transform duration-700">
+            <Zap size={120} />
           </div>
-
-          <div className="bg-slate-900 rounded-[2.5rem] p-10 shadow-2xl shadow-indigo-900/20 text-white border-t-4 border-indigo-500">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="bg-slate-800 p-2.5 rounded-xl text-indigo-400">
-                <Cpu size={22} />
-              </div>
-              <h2 className="text-xl font-black tracking-tight">Access Token</h2>
-            </div>
-            <div className="space-y-5">
-              <div className="flex justify-between items-center py-2 border-b border-slate-800">
-                <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Operator</span>
-                <span className="text-sm font-bold text-indigo-100">{user?.name}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-slate-800">
-                <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Authorization</span>
-                <span className="text-[10px] font-black bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full uppercase tracking-widest">{user?.role}</span>
-              </div>
-              <div className="flex justify-between items-center py-2">
-                <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Instance ID</span>
-                <span className="text-[10px] font-mono font-bold text-slate-600">X-TG-NODE-A4</span>
-              </div>
+          
+          <div className="relative z-10 h-full flex flex-col">
+            <h3 className="text-xl font-black uppercase tracking-tight mb-2">Instant Operations</h3>
+            <p className="text-indigo-100/70 text-sm font-medium mb-8">Execute core system commands with zero-latency protocols.</p>
+            
+            <div className="space-y-3 mt-auto">
+              <button className="w-full py-4 px-6 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl flex items-center justify-between group/btn transition-all">
+                <div className="flex items-center gap-3">
+                  <Clock size={18} />
+                  <span className="font-bold text-sm">Update Schedule</span>
+                </div>
+                <ChevronRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
+              </button>
+              <button className="w-full py-4 px-6 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl flex items-center justify-between group/btn transition-all">
+                <div className="flex items-center gap-3">
+                  <ShieldAlert size={18} />
+                  <span className="font-bold text-sm">Security Audit</span>
+                </div>
+                <ChevronRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
+              </button>
+              <button className="w-full py-4 px-6 bg-white text-indigo-600 border border-white rounded-2xl flex items-center justify-between group/btn transition-all font-black uppercase tracking-widest text-xs">
+                <div className="flex items-center gap-3">
+                  <Settings size={18} />
+                  <span>Configure Node</span>
+                </div>
+                <ChevronRight size={16} />
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Modern Verification Modal */}
-      {showOtpModal && (
-        <div className="fixed inset-0 flex items-center justify-center p-6 z-100 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className="bg-white rounded-[3rem] p-12 w-full max-w-xl shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="absolute top-0 left-0 w-full h-3 bg-linear-to-r from-indigo-500 via-purple-500 to-rose-500" />
-            
-            <div className="text-center mb-10">
-              <div className="inline-flex items-center justify-center w-24 h-24 bg-indigo-50 rounded-[2.5rem] text-indigo-600 mb-6 shadow-inner">
-                <Smartphone size={40} strokeWidth={2.5} />
+      {/* Metrics Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[
+          { label: 'Active Rules', value: '12', icon: List, trend: '+2', trendUp: true },
+          { label: 'Connected Groups', value: '42', icon: Network, trend: 'Stable', trendUp: true },
+          { label: 'Processed Bids', value: '1,284', icon: Zap, trend: '+124', trendUp: true },
+          { label: 'Security Threats', value: '0', icon: ShieldCheck, trend: 'None', trendUp: true },
+        ].map((stat, i) => (
+          <div key={i} className="bg-card border border-border p-6 rounded-3xl hover:border-indigo-500/30 transition-colors group">
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-10 h-10 bg-muted rounded-xl flex items-center justify-center text-muted-foreground group-hover:bg-indigo-500/10 group-hover:text-indigo-500 transition-colors">
+                <stat.icon size={20} />
               </div>
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-3">Authorize Node</h2>
-              <p className="text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">Enter the 2FA synchronization code from your Telegram mobile application.</p>
+              <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase ${stat.trendUp ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                {stat.trendUp ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
+                {stat.trend}
+              </div>
             </div>
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">{stat.label}</p>
+            <p className="text-3xl font-black tracking-tighter">{stat.value}</p>
+          </div>
+        ))}
+      </div>
 
-            <form onSubmit={handleOtpSubmit} className="space-y-10">
-              <div className="relative">
+      {/* OTP Modal */}
+      {showOtpModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" />
+          <div className="bg-card border border-border w-full max-w-md rounded-[2.5rem] p-10 relative z-10 shadow-2xl">
+            <div className="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-500 mb-6 mx-auto ring-1 ring-amber-500/20">
+              <Key size={32} />
+            </div>
+            <h3 className="text-2xl font-black text-center mb-2">Auth Link Required</h3>
+            <p className="text-center text-muted-foreground font-medium mb-8">Enter the verification code from your Telegram mobile app to link this node.</p>
+            
+            <form onSubmit={handleOtpSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest ml-1">Secure Code</label>
                 <input
                   type="text"
+                  className="w-full px-6 py-4 bg-muted border border-border rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-center text-2xl font-black tracking-[0.5em] placeholder:text-slate-700"
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value)}
-                  placeholder="0 0 0 0 0"
+                  placeholder="00000"
+                  maxLength={5}
                   required
-                  autoFocus
-                  className="w-full text-center text-5xl tracking-[0.8rem] font-black py-10 bg-slate-50 border-2 border-slate-100 rounded-4xl focus:border-indigo-500 focus:bg-white outline-none transition-all duration-300 text-slate-900 placeholder:opacity-20"
                 />
               </div>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-black py-6 rounded-3xl shadow-xl shadow-slate-200 transition-all active:scale-[0.98]">
-                  VERIFY IDENTITY
-                </button>
-              </div>
+              <button
+                type="submit"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-sm flex items-center justify-center gap-2"
+              >
+                <Smartphone size={18} />
+                <span>Link Terminal</span>
+              </button>
             </form>
-
-            <div className="mt-10 flex items-center justify-center gap-2 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">
-              <ShieldAlert size={14} />
-              Time-sensitive secure request
-            </div>
           </div>
         </div>
       )}

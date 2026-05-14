@@ -3,7 +3,22 @@ import apiClient from '../api/client';
 import type { BidRule, TelegramGroup, TopicInfo } from '../types';
 import toast from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
-import { AlertCircle, Plus, Trash2, Edit } from 'lucide-react';
+import { 
+  AlertCircle, 
+  Plus, 
+  Trash2, 
+  Edit, 
+  Search, 
+  Hash, 
+  Globe, 
+  CheckCircle2, 
+  XCircle,
+  MessageSquare,
+  LayoutGrid,
+  List as ListIcon,
+  RefreshCcw,
+  Settings
+} from 'lucide-react';
 
 const Rules: React.FC = () => {
   const [rules, setRules] = useState<BidRule[]>([]);
@@ -14,6 +29,8 @@ const Rules: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingRule, setEditingRule] = useState<BidRule | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const { isAdmin } = useAuth();
 
   const [newRule, setNewRule] = useState({
@@ -27,21 +44,7 @@ const Rules: React.FC = () => {
   });
 
   const selectedGroup = useMemo(
-    () => {
-      console.log('=== selectedGroup useMemo called ===');
-      console.log('newRule.target_group_id:', newRule.target_group_id);
-      console.log('groups length:', groups.length);
-      
-      const group = groups.find((group) => {
-        console.log('Comparing:', group.id, 'with', newRule.target_group_id, 'result:', String(group.id) === String(newRule.target_group_id));
-        return String(group.id) === String(newRule.target_group_id);
-      });
-      
-      console.log('Found group:', group);
-      console.log('Group type:', group?.type);
-      console.log('=== end selectedGroup useMemo ===');
-      return group;
-    },
+    () => groups.find((group) => String(group.id) === String(newRule.target_group_id)),
     [groups, newRule.target_group_id]
   );
 
@@ -51,14 +54,7 @@ const Rules: React.FC = () => {
   );
 
   const isSupergroupSelected = selectedGroup?.type === 'supergroup';
-  console.log('isSupergroupSelected:', isSupergroupSelected);
   const isEditSupergroupSelected = selectedEditGroup?.type === 'supergroup';
-
-  useEffect(() => {
-    console.log('selectedGroup changed:', selectedGroup);
-    console.log('newRule.target_group_id changed:', newRule.target_group_id);
-    console.log('groups changed:', groups.length);
-  }, [selectedGroup, newRule.target_group_id, groups]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -68,7 +64,6 @@ const Rules: React.FC = () => {
         apiClient.get('/groups'),
       ]);
       setRules(rulesRes.data);
-      console.log('Groups data loaded:', groupsRes.data);
       setGroups(groupsRes.data);
     } catch {
       toast.error('Gagal memuat rules/groups.');
@@ -83,9 +78,7 @@ const Rules: React.FC = () => {
 
   useEffect(() => {
     const fetchTopics = async () => {
-      console.log('fetchTopics called:', { target_group_id: newRule.target_group_id, isSupergroupSelected });
       if (!newRule.target_group_id || !isSupergroupSelected) {
-        console.log('Clearing topics - no group or not supergroup');
         setTopics([]);
         setNewRule((prev) => ({ ...prev, topic_id: 0 }));
         return;
@@ -93,15 +86,13 @@ const Rules: React.FC = () => {
 
       setLoadingTopics(true);
       try {
-        console.log('Fetching topics for group:', newRule.target_group_id);
         const response = await apiClient.get(`/groups/${newRule.target_group_id}/topics`);
-        console.log('Topics response:', response.data);
         setTopics(response.data ?? []);
       } catch (error: unknown) {
-        console.error('Error fetching topics:', error);
         setTopics([]);
         setNewRule((prev) => ({ ...prev, topic_id: 0 }));
-        if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 500) {
+        const axiosError = error as { response?: { status: number } };
+        if (axiosError?.response?.status === 500) {
           toast.error('Bot belum running. Selesaikan OTP dulu.');
         } else {
           toast.error('Gagal memuat topics.');
@@ -116,22 +107,16 @@ const Rules: React.FC = () => {
 
   useEffect(() => {
     const fetchEditTopics = async () => {
-      console.log('fetchEditTopics called:', { target_group_id: editingRule?.target_group_id, isEditSupergroupSelected });
-      if (!editingRule?.target_group_id || !isEditSupergroupSelected) {
-        console.log('Not fetching edit topics - no group or not supergroup');
-        return;
-      }
+      if (!editingRule?.target_group_id || !isEditSupergroupSelected) return;
 
       setLoadingTopics(true);
       try {
-        console.log('Fetching edit topics for group:', editingRule.target_group_id);
         const response = await apiClient.get(`/groups/${editingRule.target_group_id}/topics`);
-        console.log('Edit topics response:', response.data);
         setTopics(response.data ?? []);
       } catch (error: unknown) {
-        console.error('Error fetching edit topics:', error);
         setTopics([]);
-        if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 500) {
+        const axiosError = error as { response?: { status: number } };
+        if (axiosError?.response?.status === 500) {
           toast.error('Bot belum running. Selesaikan OTP dulu.');
         } else {
           toast.error('Gagal memuat topics.');
@@ -167,8 +152,9 @@ const Rules: React.FC = () => {
       });
       fetchData();
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 403) {
-        toast.error('Anda tidak punya akses untuk membuat rule.');
+      const axiosError = error as { response?: { status: number } };
+      if (axiosError?.response?.status === 403) {
+        toast.error('Anda tidak punya akses.');
         return;
       }
       toast.error('Gagal membuat rule.');
@@ -184,13 +170,14 @@ const Rules: React.FC = () => {
         ...editingRule,
         target_group_id: String(editingRule.target_group_id),
       });
-      toast.success('Rule berhasil diperbarui.');
+      toast.success('Rule diperbarui.');
       setShowEditModal(false);
       setEditingRule(null);
       fetchData();
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 403) {
-        toast.error('Anda tidak punya akses untuk mengupdate rule.');
+      const axiosError = error as { response?: { status: number } };
+      if (axiosError?.response?.status === 403) {
+        toast.error('Anda tidak punya akses.');
         return;
       }
       toast.error('Gagal mengupdate rule.');
@@ -206,342 +193,367 @@ const Rules: React.FC = () => {
     if (!window.confirm('Hapus rule ini?')) return;
     try {
       await apiClient.delete(`/rules/${id}`);
-      toast.success('Rule berhasil dihapus.');
+      toast.success('Rule dihapus.');
       fetchData();
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 403) {
-        toast.error('Anda tidak punya akses untuk menghapus rule.');
+      const axiosError = error as { response?: { status: number } };
+      if (axiosError?.response?.status === 403) {
+        toast.error('Anda tidak punya akses.');
         return;
       }
       toast.error('Gagal menghapus rule.');
     }
   };
 
+  const filteredRules = rules.filter(rule => 
+    rule.keyword.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    rule.bid_message.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    rule.target_group_id.includes(searchQuery)
+  );
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 animate-in fade-in duration-700">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Bid Rules</h1>
-          <p className="text-slate-500">Kelola keyword bidding berdasarkan group dan topic.</p>
+          <h1 className="text-4xl font-black tracking-tight mb-2">Bid Rules</h1>
+          <p className="text-muted-foreground font-medium">Manage keyword triggers and automated bidding logic.</p>
         </div>
         {isAdmin && (
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2 group"
           >
-            <Plus size={16} />
-            Tambah Rule
+            <Plus size={18} className="group-hover:rotate-90 transition-transform" />
+            <span>Create Rule</span>
           </button>
         )}
+      </header>
+
+      {/* Toolbar */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1 group">
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+          <input 
+            type="text" 
+            placeholder="Search rules, keywords, or group IDs..." 
+            className="w-full pl-12 pr-4 py-3 bg-card border border-border rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-2 p-1 bg-muted rounded-2xl border border-border">
+          <button 
+            onClick={() => setViewMode('table')}
+            className={`p-2 rounded-xl transition-all ${viewMode === 'table' ? 'bg-card shadow-sm text-indigo-500' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <ListIcon size={20} />
+          </button>
+          <button 
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-card shadow-sm text-indigo-500' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <LayoutGrid size={20} />
+          </button>
+        </div>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-        {loading ? (
-          <div className="p-8 text-center text-slate-500">Memuat data rules...</div>
-        ) : rules.length === 0 ? (
-          <div className="p-10 text-center text-slate-500">
-            <AlertCircle className="mx-auto mb-2" size={24} />
-            Belum ada rules.
+      {loading ? (
+        <div className="py-20 flex flex-col items-center justify-center text-muted-foreground space-y-4">
+          <RefreshCcw size={40} className="animate-spin text-indigo-500" />
+          <p className="font-black uppercase tracking-widest text-xs">Syncing Rulebase...</p>
+        </div>
+      ) : filteredRules.length === 0 ? (
+        <div className="py-32 bg-card border border-border rounded-[3rem] flex flex-col items-center justify-center text-center px-6">
+          <div className="w-20 h-20 bg-muted rounded-[2rem] flex items-center justify-center text-muted-foreground mb-6">
+            <AlertCircle size={40} />
           </div>
-        ) : (
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-600">
-              <tr>
-                <th className="px-4 py-3">ID</th>
-                <th className="px-4 py-3">Target Group ID</th>
-                <th className="px-4 py-3">Topic ID</th>
-                <th className="px-4 py-3">Keyword</th>
-                <th className="px-4 py-3">Bid Message</th>
-                <th className="px-4 py-3">Active</th>
-                <th className="px-4 py-3">Has Bidded</th>
-                <th className="px-4 py-3">Stop Keywords</th>
-                {isAdmin && <th className="px-4 py-3 text-right">Action</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {rules.map((rule) => (
-                <tr key={rule.ID}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{rule.ID}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{rule.target_group_id}</td>
-                  <td className="px-4 py-3">
-                    {rule.topic_id === 0 ? (
-                      <span className="rounded-full bg-indigo-100 px-2 py-1 text-xs font-semibold text-indigo-700">
-                        Topic: Global
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
-                        Topic: #{rule.topic_id}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">{rule.keyword}</td>
-                  <td className="px-4 py-3">{rule.bid_message}</td>
-                  <td className="px-4 py-3">
-                    {rule.is_active ? (
-                      <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700">
-                        Active
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">
-                        Inactive
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {rule.has_bidded ? (
-                      <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-700">
-                        Yes
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700">
-                        No
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">{rule.stop_keywords || '-'}</td>
-                  {isAdmin && (
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-1">
-                        <button
-                          onClick={() => handleEditClick(rule)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-blue-200 px-2.5 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50"
-                        >
-                          <Edit size={14} />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteRule(rule.ID)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50"
-                        >
-                          <Trash2 size={14} />
-                          Delete
-                        </button>
+          <h3 className="text-xl font-black mb-2">No Rules Found</h3>
+          <p className="text-muted-foreground max-w-xs font-medium">Try adjusting your filters or create a new automation rule to get started.</p>
+        </div>
+      ) : viewMode === 'table' ? (
+        <div className="bg-card rounded-[2.5rem] border border-border overflow-hidden shadow-xl shadow-slate-200/50 dark:shadow-none">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-muted/50 border-b border-border">
+                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</th>
+                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Identity</th>
+                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Keyword Logic</th>
+                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Response Payload</th>
+                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Target Node</th>
+                  {isAdmin && <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right">Actions</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredRules.map((rule) => (
+                  <tr key={rule.ID} className="hover:bg-muted/30 transition-colors group">
+                    <td className="px-6 py-5">
+                      {rule.is_active ? (
+                        <div className="flex items-center gap-2 text-emerald-500">
+                          <CheckCircle2 size={16} />
+                          <span className="text-[10px] font-black uppercase tracking-widest">Active</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-rose-500">
+                          <XCircle size={16} />
+                          <span className="text-[10px] font-black uppercase tracking-widest">Paused</span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="font-black text-xs text-indigo-500 mb-1">RULE-{rule.ID}</div>
+                      <div className="flex items-center gap-2">
+                        {rule.has_bidded ? (
+                          <span className="bg-amber-500/10 text-amber-500 text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full ring-1 ring-amber-500/20">Executed</span>
+                        ) : (
+                          <span className="bg-slate-500/10 text-slate-500 text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full ring-1 ring-slate-500/20">Pending</span>
+                        )}
                       </div>
                     </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-6">
-            <h2 className="mb-1 text-xl font-bold text-slate-900">Buat Rule Baru</h2>
-            <p className="mb-6 text-sm text-slate-500">Pilih group dan topic agar rule tepat sasaran.</p>
-
-            <form onSubmit={handleCreateRule} className="space-y-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Target Group</label>
-                <select
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                  value={newRule.target_group_id}
-                  onChange={(e) => setNewRule((prev) => ({ ...prev, target_group_id: e.target.value }))}
-                  required
-                >
-                  <option value="">Pilih group...</option>
-                  {groups.map((group) => (
-                    <option key={group.id} value={String(group.id)}>
-                      {group.title} ({group.type}) - {group.id}
-                    </option>
-                  ))}
-                </select>
+                    <td className="px-6 py-5">
+                      <div className="flex flex-wrap gap-1 max-w-xs">
+                        {rule.keyword.split(',').map((k, idx) => (
+                          <span key={idx} className="bg-muted px-2 py-1 rounded-lg text-xs font-bold border border-border">{k.trim()}</span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-2 max-w-xs">
+                        <MessageSquare size={14} className="text-muted-foreground shrink-0" />
+                        <span className="text-sm font-medium truncate italic text-muted-foreground">"{rule.bid_message}"</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-indigo-500/10 rounded-lg flex items-center justify-center text-indigo-500">
+                          {rule.topic_id === 0 ? <Globe size={16} /> : <Hash size={16} />}
+                        </div>
+                        <div>
+                          <div className="text-xs font-black tracking-tight truncate max-w-[120px]">{rule.target_group_id}</div>
+                          <div className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">
+                            {rule.topic_id === 0 ? 'Global Stream' : `Topic #${rule.topic_id}`}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    {isAdmin && (
+                      <td className="px-6 py-5 text-right">
+                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => handleEditClick(rule)}
+                            className="p-2 bg-indigo-500/10 text-indigo-500 rounded-xl hover:bg-indigo-500 hover:text-white transition-all"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteRule(rule.ID)}
+                            className="p-2 bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredRules.map((rule) => (
+            <div key={rule.ID} className="bg-card border border-border rounded-[2rem] p-8 hover:border-indigo-500/30 transition-all group relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:scale-110 transition-transform">
+                <Settings size={80} />
               </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Topic</label>
-                <select
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-100"
-                  value={newRule.topic_id}
-                  onChange={(e) => setNewRule((prev) => ({ ...prev, topic_id: Number(e.target.value) }))}
-                  disabled={!isSupergroupSelected || loadingTopics}
-                >
-                  <option value={0}>0 - Global (tanpa topic khusus)</option>
-                  {topics.map((topic) => (
-                    <option key={topic.id} value={topic.id}>
-                      {topic.id} - {topic.title}
-                    </option>
-                  ))}
-                </select>
-                {!isSupergroupSelected && newRule.target_group_id && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    Group bukan supergroup, topic otomatis global (`topic_id = 0`).
-                  </p>
+              
+              <div className="flex justify-between items-start mb-6 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${rule.is_active ? 'bg-emerald-500' : 'bg-rose-500'} animate-pulse`} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">RULE-{rule.ID}</span>
+                </div>
+                {isAdmin && (
+                  <div className="flex gap-2">
+                    <button onClick={() => handleEditClick(rule)} className="text-muted-foreground hover:text-indigo-500"><Edit size={16} /></button>
+                    <button onClick={() => handleDeleteRule(rule.ID)} className="text-muted-foreground hover:text-rose-500"><Trash2 size={16} /></button>
+                  </div>
                 )}
               </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Keyword</label>
-                <textarea
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 h-24 resize-none"
-                  value={newRule.keyword}
-                  onChange={(e) => setNewRule((prev) => ({ ...prev, keyword: e.target.value }))}
-                  placeholder="Contoh: iphone 13, pa/a, 5 juta"
-                  required
-                />
-                <p className="mt-1 text-xs text-slate-500">
-                  * Pisahkan antar kata kunci dengan <b>koma (,)</b>. Semua kata kunci wajib ada di pesan (Logika AND). Mendukung format pola Regex.
-                </p>
+              
+              <div className="space-y-6 relative z-10">
+                <div>
+                  <p className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Keyword Cluster</p>
+                  <div className="flex flex-wrap gap-1">
+                    {rule.keyword.split(',').map((k, idx) => (
+                      <span key={idx} className="bg-muted px-2 py-1 rounded-lg text-xs font-bold border border-border">{k.trim()}</span>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="p-4 bg-muted/50 rounded-2xl border border-border">
+                  <p className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Auto-Response</p>
+                  <p className="text-sm font-medium italic">"{rule.bid_message}"</p>
+                </div>
+                
+                <div className="flex items-center justify-between pt-4 border-t border-border">
+                  <div className="flex items-center gap-2">
+                    <Globe size={14} className="text-indigo-500" />
+                    <span className="text-[10px] font-black tracking-tight truncate max-w-[100px]">{rule.target_group_id}</span>
+                  </div>
+                  <div className="text-[10px] font-black text-muted-foreground">
+                    {rule.topic_id === 0 ? 'GLOBAL' : `TOPIC ${rule.topic_id}`}
+                  </div>
+                </div>
               </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Bid Message</label>
-                <input
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                  value={newRule.bid_message}
-                  onChange={(e) => setNewRule((prev) => ({ ...prev, bid_message: e.target.value }))}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Stop Keywords</label>
-                <input
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                  value={newRule.stop_keywords}
-                  onChange={(e) => setNewRule((prev) => ({ ...prev, stop_keywords: e.target.value }))}
-                  placeholder="sold, closed"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
-                >
-                  Batal
-                </button>
-                <button type="submit" className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
-                  Simpan Rule
-                </button>
-              </div>
-            </form>
-          </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {showEditModal && editingRule && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-6">
-            <h2 className="mb-1 text-xl font-bold text-slate-900">Edit Rule</h2>
-            <p className="mb-6 text-sm text-slate-500">Perbarui rule yang sudah ada.</p>
-
-            <form onSubmit={handleUpdateRule} className="space-y-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Target Group</label>
-                <select
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                  value={editingRule.target_group_id}
-                  onChange={(e) => setEditingRule((prev) => prev ? { ...prev, target_group_id: e.target.value } : null)}
-                  required
-                >
-                  <option value="">Pilih group...</option>
-                  {groups.map((group) => (
-                    <option key={group.id} value={String(group.id)}>
-                      {group.title} ({group.id})
-                    </option>
-                  ))}
-                </select>
+      {/* Modals */}
+      {(showCreateModal || showEditModal) && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-300" />
+          <div className="bg-card border border-border w-full max-w-2xl rounded-[3rem] p-10 relative z-10 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
+            <header className="mb-10 text-center">
+              <div className="w-16 h-16 bg-indigo-600/10 rounded-[1.5rem] flex items-center justify-center text-indigo-600 mb-6 mx-auto ring-1 ring-indigo-600/20">
+                <Settings size={32} />
               </div>
+              <h2 className="text-3xl font-black tracking-tight mb-2">{showCreateModal ? 'New Rule Configuration' : 'Edit Rule Payload'}</h2>
+              <p className="text-muted-foreground font-medium">Define automation parameters for targeted group interaction.</p>
+            </header>
 
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Topic</label>
-                <select
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-100"
-                  value={editingRule.topic_id}
-                  onChange={(e) => setEditingRule((prev) => prev ? { ...prev, topic_id: Number(e.target.value) } : null)}
-                  disabled={!isEditSupergroupSelected || loadingTopics}
-                >
-                  <option value={0}>0 - Global (tanpa topic khusus)</option>
-                  {topics.map((topic) => (
-                    <option key={topic.id} value={topic.id}>
-                      {topic.id} - {topic.title}
-                    </option>
-                  ))}
-                </select>
-                {!isEditSupergroupSelected && editingRule.target_group_id && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    Group bukan supergroup, topic otomatis global (`topic_id = 0`).
-                  </p>
-                )}
-              </div>
+            <form onSubmit={showCreateModal ? handleCreateRule : handleUpdateRule} className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Target Cluster</label>
+                  <select
+                    className="w-full bg-muted border border-border rounded-2xl px-4 py-3 outline-none focus:ring-2 ring-indigo-500/20 focus:border-indigo-500 font-bold text-sm transition-all appearance-none"
+                    value={showCreateModal ? newRule.target_group_id : (editingRule?.target_group_id || '')}
+                    onChange={(e) => showCreateModal 
+                      ? setNewRule(prev => ({ ...prev, target_group_id: e.target.value }))
+                      : setEditingRule(prev => prev ? { ...prev, target_group_id: e.target.value } : null)
+                    }
+                    required
+                  >
+                    <option value="">Select Group...</option>
+                    {groups.map((group) => (
+                      <option key={group.id} value={String(group.id)}>
+                        {group.title} ({group.id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Keyword</label>
-                <textarea
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 h-24 resize-none"
-                  value={editingRule.keyword}
-                  onChange={(e) => setEditingRule((prev) => prev ? { ...prev, keyword: e.target.value } : null)}
-                  placeholder="Contoh: iphone 13, pa/a, 5 juta"
-                  required
-                />
-                <p className="mt-1 text-xs text-slate-500">
-                  * Pisahkan antar kata kunci dengan <b>koma (,)</b>. Semua kata kunci wajib ada di pesan (Logika AND). Mendukung format pola Regex.
-                </p>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Bid Message</label>
-                <input
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                  value={editingRule.bid_message}
-                  onChange={(e) => setEditingRule((prev) => prev ? { ...prev, bid_message: e.target.value } : null)}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Stop Keywords</label>
-                <input
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                  value={editingRule.stop_keywords}
-                  onChange={(e) => setEditingRule((prev) => prev ? { ...prev, stop_keywords: e.target.value } : null)}
-                  placeholder="sold, closed"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Status</label>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="is_active"
-                      checked={editingRule.is_active}
-                      onChange={() => setEditingRule((prev) => prev ? { ...prev, is_active: true } : null)}
-                      className="text-blue-600"
-                    />
-                    <span className="text-sm text-slate-700">Active</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="is_active"
-                      checked={!editingRule.is_active}
-                      onChange={() => setEditingRule((prev) => prev ? { ...prev, is_active: false } : null)}
-                      className="text-blue-600"
-                    />
-                    <span className="text-sm text-slate-700">Inactive</span>
-                  </label>
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Stream Partition (Topic)</label>
+                  <select
+                    className="w-full bg-muted border border-border rounded-2xl px-4 py-3 outline-none focus:ring-2 ring-indigo-500/20 focus:border-indigo-500 font-bold text-sm transition-all appearance-none disabled:opacity-50"
+                    value={showCreateModal ? newRule.topic_id : (editingRule?.topic_id || 0)}
+                    onChange={(e) => showCreateModal
+                      ? setNewRule(prev => ({ ...prev, topic_id: Number(e.target.value) }))
+                      : setEditingRule(prev => prev ? { ...prev, topic_id: Number(e.target.value) } : null)
+                    }
+                    disabled={!(showCreateModal ? isSupergroupSelected : isEditSupergroupSelected) || loadingTopics}
+                  >
+                    <option value={0}>0 - Global Stream</option>
+                    {topics.map((topic) => (
+                      <option key={topic.id} value={topic.id}>
+                        {topic.id} - {topic.title}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Keyword Match Logic (AND)</label>
+                <textarea
+                  className="w-full bg-muted border border-border rounded-2xl px-5 py-4 outline-none focus:ring-2 ring-indigo-500/20 focus:border-indigo-500 font-medium text-sm transition-all h-24 resize-none"
+                  value={showCreateModal ? newRule.keyword : (editingRule?.keyword || '')}
+                  onChange={(e) => showCreateModal
+                    ? setNewRule(prev => ({ ...prev, keyword: e.target.value }))
+                    : setEditingRule(prev => prev ? { ...prev, keyword: e.target.value } : null)
+                  }
+                  placeholder="e.g. pa/a, 512gb, pristine"
+                  required
+                />
+                <p className="text-[10px] text-muted-foreground font-medium">* Comma separated. All terms must match for execution.</p>
+              </div>
+
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Response Payload</label>
+                  <input
+                    className="w-full bg-muted border border-border rounded-2xl px-5 py-4 outline-none focus:ring-2 ring-indigo-500/20 focus:border-indigo-500 font-bold text-sm transition-all"
+                    value={showCreateModal ? newRule.bid_message : (editingRule?.bid_message || '')}
+                    onChange={(e) => showCreateModal
+                      ? setNewRule(prev => ({ ...prev, bid_message: e.target.value }))
+                      : setEditingRule(prev => prev ? { ...prev, bid_message: e.target.value } : null)
+                    }
+                    placeholder="Auto-response message..."
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Termination Keywords (STOP)</label>
+                  <input
+                    className="w-full bg-muted border border-border rounded-2xl px-5 py-4 outline-none focus:ring-2 ring-indigo-500/20 focus:border-indigo-500 font-bold text-sm transition-all"
+                    value={showCreateModal ? newRule.stop_keywords : (editingRule?.stop_keywords || '')}
+                    onChange={(e) => showCreateModal
+                      ? setNewRule(prev => ({ ...prev, stop_keywords: e.target.value }))
+                      : setEditingRule(prev => prev ? { ...prev, stop_keywords: e.target.value } : null)
+                    }
+                    placeholder="e.g. sold, close, ends"
+                  />
+                </div>
+              </div>
+
+              {!showCreateModal && editingRule && (
+                <div className="flex items-center gap-6 p-6 bg-muted/50 rounded-2xl border border-border">
+                  <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Protocol State:</span>
+                  <div className="flex items-center gap-6">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="radio"
+                        checked={editingRule.is_active}
+                        onChange={() => setEditingRule(prev => prev ? { ...prev, is_active: true } : null)}
+                        className="w-4 h-4 text-indigo-600 bg-slate-800 border-border focus:ring-indigo-500/20"
+                      />
+                      <span className="text-sm font-bold group-hover:text-indigo-500 transition-colors">Active</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="radio"
+                        checked={!editingRule.is_active}
+                        onChange={() => setEditingRule(prev => prev ? { ...prev, is_active: false } : null)}
+                        className="w-4 h-4 text-rose-600 bg-slate-800 border-border focus:ring-rose-500/20"
+                      />
+                      <span className="text-sm font-bold group-hover:text-rose-500 transition-colors">Paused</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-4 pt-4">
                 <button
                   type="button"
                   onClick={() => {
+                    setShowCreateModal(false);
                     setShowEditModal(false);
                     setEditingRule(null);
                   }}
-                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
+                  className="flex-1 py-4 bg-muted hover:bg-border text-foreground font-black uppercase tracking-widest text-xs rounded-2xl transition-all"
                 >
-                  Batal
+                  Terminate
                 </button>
-                <button type="submit" className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
-                  Update Rule
+                <button 
+                  type="submit" 
+                  className="flex-[2] py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-xs rounded-2xl transition-all shadow-xl shadow-indigo-600/20"
+                >
+                  Commit Configuration
                 </button>
               </div>
             </form>
