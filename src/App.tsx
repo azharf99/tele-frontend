@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Rules from './pages/Rules';
 import Groups from './pages/Groups';
 import Profile from './pages/Profile';
+import AISettings from './pages/AISettings';
 import Home from './pages/Home';
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="rules" element={<Rules />} />
             <Route path="groups" element={<Groups />} />
+            <Route path="ai-settings" element={<AISettings />} />
             <Route path="profile" element={<Profile />} />
           </Route>
           {/* Redirect old home to dashboard if authenticated, or keep as Home */}

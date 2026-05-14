@@ -259,9 +259,6 @@ const Dashboard: React.FC = () => {
                 <button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-black py-6 rounded-3xl shadow-xl shadow-slate-200 transition-all active:scale-[0.98]">
                   VERIFY IDENTITY
                 </button>
-                <button type="button" onClick={() => setShowOtpModal(false)} className="px-10 bg-slate-50 hover:bg-slate-100 text-slate-500 font-bold py-6 rounded-3xl transition-all">
-                  DISMISS
-                </button>
               </div>
             </form>
 
