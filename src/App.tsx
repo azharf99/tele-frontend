@@ -9,6 +9,7 @@ import Rules from './pages/Rules';
 import Groups from './pages/Groups';
 import Profile from './pages/Profile';
 import AISettings from './pages/AISettings';
+import Users from './pages/Users';
 import Home from './pages/Home';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="rules" element={<Rules />} />
             <Route path="groups" element={<Groups />} />
+            <Route path="users" element={<Users />} />
             <Route path="ai-settings" element={<AISettings />} />
             <Route path="profile" element={<Profile />} />
           </Route>

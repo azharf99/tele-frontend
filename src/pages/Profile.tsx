@@ -2,19 +2,20 @@ import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import apiClient from '../api/client';
 import toast from 'react-hot-toast';
-import { User, Mail, Lock, Save, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Save, Eye, EyeOff, User as UserIcon } from 'lucide-react';
+import { AxiosError } from 'axios';
 
 interface ProfileFormData {
-  email: string;
+  name: string;
   password: string;
   confirmPassword: string;
 }
 
 const Profile: React.FC = () => {
   const { user, updateUser } = useAuth();
-  console.log(user)
+  
   const [formData, setFormData] = useState<ProfileFormData>({
-    email: user?.email || '',
+    name: user?.name || '',
     password: '',
     confirmPassword: '',
   });
@@ -32,14 +33,8 @@ const Profile: React.FC = () => {
 
   const validateForm = (): boolean => {
     // Check if at least one field is being updated
-    if (!formData.email && !formData.password) {
-      toast.error('Please update at least one field (email or password)');
-      return false;
-    }
-
-    // Validate email format if provided
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      toast.error('Please enter a valid email address');
+    if (!formData.name && !formData.password) {
+      toast.error('Please update at least one field (name or password)');
       return false;
     }
 
@@ -69,23 +64,29 @@ const Profile: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const updateData: { email?: string; password?: string } = {};
+      const updateData: { name?: string; password?: string } = {};
       
-      if (formData.email) {
-        updateData.email = formData.email;
+      if (formData.name && formData.name !== user?.name) {
+        updateData.name = formData.name;
       }
       
       if (formData.password) {
         updateData.password = formData.password;
       }
 
+      if (Object.keys(updateData).length === 0) {
+        toast.error('No changes detected');
+        setIsLoading(false);
+        return;
+      }
+
       const response = await apiClient.put('/profile', updateData);
       
       toast.success(response.data.message || 'Profile updated successfully');
 
-      // If email was updated, we need to update the user context
-      if (formData.email && user) {
-        updateUser({ email: formData.email });
+      // Update user context with new name if it was changed
+      if (updateData.name && user) {
+        updateUser({ name: updateData.name });
       }
 
       // Clear password fields after successful update
@@ -95,9 +96,12 @@ const Profile: React.FC = () => {
         confirmPassword: '',
       }));
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Profile update error:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to update profile';
+      let errorMessage = 'Failed to update profile';
+      if (error instanceof AxiosError) {
+        errorMessage = error.response?.data?.message || errorMessage;
+      }
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -117,7 +121,7 @@ const Profile: React.FC = () => {
           <div className="mb-8 p-4 bg-slate-700/30 rounded-xl">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-slate-600 flex items-center justify-center">
-                <User size={32} className="text-slate-300" />
+                <UserIcon size={32} className="text-slate-300" />
               </div>
               <div>
                 <h3 className="text-xl font-semibold text-white">{user?.name}</h3>
@@ -128,22 +132,35 @@ const Profile: React.FC = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Field */}
+            {/* Name Field */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="name" className="block text-sm font-medium text-slate-300 mb-2">
+                <UserIcon size={16} className="inline mr-2" />
+                Full Name
+              </label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                placeholder="Enter your full name"
+                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              />
+            </div>
+
+            {/* Email Field (Read-only) */}
+            <div>
+              <label className="block text-sm font-medium text-slate-500 mb-2">
                 <Mail size={16} className="inline mr-2" />
-                Email Address
+                Email Address (Permanent)
               </label>
               <input
                 type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="Enter new email address"
-                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                value={user?.email || ''}
+                disabled
+                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-slate-500 cursor-not-allowed"
               />
-              <p className="mt-1 text-xs text-slate-500">Leave empty to keep current email</p>
             </div>
 
             {/* Password Field */}

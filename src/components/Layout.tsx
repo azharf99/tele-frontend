@@ -4,7 +4,6 @@ import { useAuth } from '../hooks/useAuth';
 import { 
   LayoutDashboard, 
   List, 
-  Users, 
   LogOut, 
   Menu, 
   X, 
@@ -12,7 +11,9 @@ import {
   User as UserIcon,
   ChevronRight,
   Settings,
-  Sparkles
+  Sparkles,
+  UserCog,
+  Share2
 } from 'lucide-react';
 
 const Layout: React.FC = () => {
@@ -81,23 +82,37 @@ const Layout: React.FC = () => {
               `}
               onClick={() => setIsSidebarOpen(false)}
             >
-              <Users size={20} />
+              <Share2 size={20} />
               <span className="font-medium">Groups</span>
               <ChevronRight size={14} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
             </NavLink>
             {isAdmin && (
-              <NavLink 
-                to="/dashboard/ai-settings" 
-                className={({ isActive }) => `
-                  flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
-                  ${isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
-                `}
-                onClick={() => setIsSidebarOpen(false)}
-              >
-                <Sparkles size={20} />
-                <span className="font-medium">AI Settings</span>
-                <ChevronRight size={14} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-              </NavLink>
+              <>
+                <NavLink 
+                  to="/dashboard/users" 
+                  className={({ isActive }) => `
+                    flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
+                    ${isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
+                  `}
+                  onClick={() => setIsSidebarOpen(false)}
+                >
+                  <UserCog size={20} />
+                  <span className="font-medium">User Management</span>
+                  <ChevronRight size={14} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                </NavLink>
+                <NavLink 
+                  to="/dashboard/ai-settings" 
+                  className={({ isActive }) => `
+                    flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
+                    ${isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
+                  `}
+                  onClick={() => setIsSidebarOpen(false)}
+                >
+                  <Sparkles size={20} />
+                  <span className="font-medium">AI Settings</span>
+                  <ChevronRight size={14} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                </NavLink>
+              </>
             )}
             <NavLink 
               to="/dashboard/profile" 

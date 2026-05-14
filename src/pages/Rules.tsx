@@ -47,7 +47,7 @@ const Rules: React.FC = () => {
 
   const selectedEditGroup = useMemo(
     () => editingRule ? groups.find((group) => String(group.id) === String(editingRule.target_group_id)) : null,
-    [groups, editingRule?.target_group_id]
+    [groups, editingRule]
   );
 
   const isSupergroupSelected = selectedGroup?.type === 'supergroup';
@@ -144,7 +144,7 @@ const Rules: React.FC = () => {
     if (showEditModal && editingRule) {
       fetchEditTopics();
     }
-  }, [editingRule?.target_group_id, isEditSupergroupSelected, showEditModal]);
+  }, [isEditSupergroupSelected, showEditModal, editingRule]);
 
   const handleCreateRule = async (e: React.FormEvent) => {
     e.preventDefault();
