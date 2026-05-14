@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../api/client';
-import { User, Role } from '../types';
+import { type User, type Role } from '../types';
 import toast from 'react-hot-toast';
 import { AxiosError } from 'axios';
-import { 
-  Users as UsersIcon, 
-  UserPlus, 
-  Edit2, 
-  Trash2, 
+import {
+  Users as UsersIcon,
+  UserPlus,
+  Edit2,
+  Trash2,
   Search,
   X,
   Mail,
@@ -21,7 +21,7 @@ const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -96,7 +96,7 @@ const Users: React.FC = () => {
           role: formData.role
         };
         if (formData.password) payload.password = formData.password;
-        
+
         await apiClient.put(`/users/${currentUser.id}`, payload);
         toast.success('User updated successfully');
       } else {
@@ -131,7 +131,7 @@ const Users: React.FC = () => {
     }
   };
 
-  const filteredUsers = users.filter(user => 
+  const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -201,11 +201,10 @@ const Users: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-slate-400">{user.email}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                        user.role === 'Admin' 
-                        ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' 
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${user.role === 'Admin'
+                        ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
                         : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                      }`}>
+                        }`}>
                         {user.role}
                       </span>
                     </td>
@@ -279,9 +278,8 @@ const Users: React.FC = () => {
                   required
                   disabled={isEditing}
                   placeholder="Enter email address"
-                  className={`w-full px-4 py-2.5 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
-                    isEditing ? 'opacity-50 cursor-not-allowed bg-slate-800' : ''
-                  }`}
+                  className={`w-full px-4 py-2.5 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${isEditing ? 'opacity-50 cursor-not-allowed bg-slate-800' : ''
+                    }`}
                 />
                 {isEditing && (
                   <p className="mt-1 text-xs text-slate-500">Email cannot be changed</p>
