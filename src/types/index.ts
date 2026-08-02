@@ -32,6 +32,19 @@ export interface TopicInfo {
   title: string;
 }
 
+export interface ImportRowError {
+  row: number;
+  message: string;
+}
+
+export interface ImportResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  total_valid: number;
+  errors: ImportRowError[] | null;
+}
+
 export type BotStatus = 'IDLE' | 'WAITING_OTP' | 'RUNNING';
 
 export interface AuthResponse {

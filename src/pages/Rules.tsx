@@ -1,23 +1,26 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import apiClient from '../api/client';
-import type { BidRule, TelegramGroup, TopicInfo } from '../types';
+import type { BidRule, ImportResult, TelegramGroup, TopicInfo } from '../types';
 import toast from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
-import { 
-  AlertCircle, 
-  Plus, 
-  Trash2, 
-  Edit, 
-  Search, 
-  Hash, 
-  Globe, 
-  CheckCircle2, 
+import {
+  AlertCircle,
+  Plus,
+  Trash2,
+  Edit,
+  Search,
+  Hash,
+  Globe,
+  CheckCircle2,
   XCircle,
   MessageSquare,
   LayoutGrid,
   List as ListIcon,
   RefreshCcw,
-  Settings
+  Settings,
+  Upload,
+  Download,
+  X
 } from 'lucide-react';
 
 const Rules: React.FC = () => {
@@ -32,6 +35,10 @@ const Rules: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const { isAdmin } = useAuth();
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
   const [newRule, setNewRule] = useState({
     target_group_id: '',
@@ -205,7 +212,64 @@ const Rules: React.FC = () => {
     }
   };
 
-  const filteredRules = rules.filter(rule => 
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file later
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      toast.error('Harap pilih file .csv');
+      return;
+    }
+    const MAX_BYTES = 2 * 1024 * 1024; // mirror backend cap (2 MiB)
+    if (file.size > MAX_BYTES) {
+      toast.error('File terlalu besar (maks 2 MiB).');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setImporting(true);
+    try {
+      const res = await apiClient.post('/rules/import', formData);
+      const result = res.data as ImportResult;
+      setImportResult(result);
+      if (result.skipped > 0) {
+        toast(`Import: ${result.created} dibuat, ${result.updated} diperbarui, ${result.skipped} dilewati.`, { icon: '⚠️' });
+      } else {
+        toast.success(`Import: ${result.created} dibuat, ${result.updated} diperbarui.`);
+      }
+      fetchData();
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { status: number; data?: { error?: string } } };
+      if (axiosError?.response?.status === 403) {
+        toast.error('Anda tidak punya akses (Admin only).');
+      } else {
+        toast.error(axiosError?.response?.data?.error || 'Gagal mengimpor CSV.');
+      }
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleDownloadTemplate = () => {
+    const header = 'target_group_id,topic_id,keyword,bid_message,stop_keywords,is_active,has_bidded';
+    const sample = [
+      '2069752017,0,iphone 13,Bid 5jt,"sold,closed",true,false',
+      '2069752017,5,"pa/a, 512gb, pristine",OB,,true,false',
+    ];
+    const csv = [header, ...sample].join('\n') + '\n';
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'bid_rules_template.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const filteredRules = rules.filter(rule =>
     rule.keyword.toLowerCase().includes(searchQuery.toLowerCase()) ||
     rule.bid_message.toLowerCase().includes(searchQuery.toLowerCase()) ||
     String(rule.target_group_id).includes(searchQuery)
@@ -219,13 +283,41 @@ const Rules: React.FC = () => {
           <p className="text-muted-foreground font-medium">Manage keyword triggers and automated bidding logic.</p>
         </div>
         {isAdmin && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2 group"
-          >
-            <Plus size={18} className="group-hover:rotate-90 transition-transform" />
-            <span>Create Rule</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={handleImportFile}
+            />
+            <button
+              onClick={handleDownloadTemplate}
+              className="px-4 py-3 bg-muted hover:bg-border text-foreground rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-2"
+              title="Download CSV template"
+            >
+              <Download size={18} />
+              <span className="hidden sm:inline">Template</span>
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+              className="px-5 py-3 bg-card border border-border hover:border-indigo-500/50 text-foreground rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              title="Bulk import rules from CSV (upsert by keyword)"
+            >
+              {importing
+                ? <RefreshCcw size={18} className="animate-spin text-indigo-500" />
+                : <Upload size={18} />}
+              <span>{importing ? 'Importing...' : 'Import CSV'}</span>
+            </button>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2 group"
+            >
+              <Plus size={18} className="group-hover:rotate-90 transition-transform" />
+              <span>Create Rule</span>
+            </button>
+          </div>
         )}
       </header>
 
@@ -557,6 +649,71 @@ const Rules: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Import Result Modal */}
+      {importResult && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-300"
+            onClick={() => setImportResult(null)}
+          />
+          <div className="bg-card border border-border w-full max-w-lg rounded-[3rem] p-10 relative z-10 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setImportResult(null)}
+              className="absolute top-6 right-6 p-2 text-muted-foreground hover:text-foreground rounded-xl hover:bg-muted transition-all"
+            >
+              <X size={20} />
+            </button>
+
+            <header className="mb-8 text-center">
+              <div className="w-16 h-16 bg-indigo-600/10 rounded-[1.5rem] flex items-center justify-center text-indigo-600 mb-6 mx-auto ring-1 ring-indigo-600/20">
+                <Upload size={32} />
+              </div>
+              <h2 className="text-3xl font-black tracking-tight mb-2">Import Complete</h2>
+              <p className="text-muted-foreground font-medium">Bulk upsert by keyword finished.</p>
+            </header>
+
+            <div className="grid grid-cols-3 gap-3 mb-8">
+              <div className="p-4 bg-emerald-500/10 rounded-2xl text-center ring-1 ring-emerald-500/20">
+                <div className="text-2xl font-black text-emerald-500">{importResult.created}</div>
+                <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mt-1">Created</div>
+              </div>
+              <div className="p-4 bg-indigo-500/10 rounded-2xl text-center ring-1 ring-indigo-500/20">
+                <div className="text-2xl font-black text-indigo-500">{importResult.updated}</div>
+                <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mt-1">Updated</div>
+              </div>
+              <div className="p-4 bg-rose-500/10 rounded-2xl text-center ring-1 ring-rose-500/20">
+                <div className="text-2xl font-black text-rose-500">{importResult.skipped}</div>
+                <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mt-1">Skipped</div>
+              </div>
+            </div>
+
+            {importResult.errors && importResult.errors.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Skipped Rows</p>
+                <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+                  {importResult.errors.map((rowErr, idx) => (
+                    <div key={idx} className="flex items-start gap-3 p-3 bg-rose-500/5 border border-rose-500/20 rounded-xl">
+                      <AlertCircle size={16} className="text-rose-500 shrink-0 mt-0.5" />
+                      <div className="text-sm">
+                        <span className="font-black text-rose-500">Row {rowErr.row}:</span>{' '}
+                        <span className="font-medium text-muted-foreground">{rowErr.message}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => setImportResult(null)}
+              className="w-full mt-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-xs rounded-2xl transition-all shadow-xl shadow-indigo-600/20"
+            >
+              Done
+            </button>
           </div>
         </div>
       )}
