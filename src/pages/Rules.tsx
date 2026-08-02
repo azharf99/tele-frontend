@@ -232,7 +232,12 @@ const Rules: React.FC = () => {
 
     setImporting(true);
     try {
-      const res = await apiClient.post('/rules/import', formData);
+      // Override the client's default application/json content-type. Axios v1
+      // otherwise serializes FormData to JSON (a File becomes {}), so we set
+      // multipart/form-data and let the browser append the boundary.
+      const res = await apiClient.post('/rules/import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       const result = res.data as ImportResult;
       setImportResult(result);
       if (result.skipped > 0) {
