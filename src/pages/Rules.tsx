@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import apiClient from '../api/client';
-import type { BidRule, ImportResult, TelegramGroup, TopicInfo } from '../types';
+import type { BidRule, BulkDeleteResult, ImportResult, TelegramGroup, TopicInfo } from '../types';
 import toast from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -40,6 +40,12 @@ const Rules: React.FC = () => {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
+  // Bulk delete: a CSV import can seed hundreds of rules, so removing them one
+  // row at a time is impractical.
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const MAX_BULK_DELETE = 1000; // mirror backend cap
+
   const [newRule, setNewRule] = useState({
     target_group_id: '',
     topic_id: 0,
@@ -70,8 +76,17 @@ const Rules: React.FC = () => {
         apiClient.get('/rules'),
         apiClient.get('/groups'),
       ]);
-      setRules(rulesRes.data);
+      const freshRules: BidRule[] = rulesRes.data;
+      setRules(freshRules);
       setGroups(groupsRes.data);
+
+      // Drop selections whose rule no longer exists (deleted here or elsewhere).
+      setSelectedIds((prev) => {
+        if (prev.size === 0) return prev;
+        const alive = new Set(freshRules.map((rule) => rule.ID));
+        const next = new Set([...prev].filter((id) => alive.has(id)));
+        return next.size === prev.size ? prev : next;
+      });
     } catch {
       toast.error('Gagal memuat rules/groups.');
     } finally {
@@ -280,6 +295,71 @@ const Rules: React.FC = () => {
     String(rule.target_group_id).includes(searchQuery)
   );
 
+  const selectedCount = selectedIds.size;
+  const allFilteredSelected =
+    filteredRules.length > 0 && filteredRules.every((rule) => selectedIds.has(rule.ID));
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  // Select-all applies to what is currently on screen, so it composes with search
+  // instead of silently grabbing rules the user cannot see.
+  const toggleSelectAllFiltered = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allFilteredSelected) {
+        filteredRules.forEach((rule) => next.delete(rule.ID));
+      } else {
+        filteredRules.forEach((rule) => next.add(rule.ID));
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+
+    if (ids.length > MAX_BULK_DELETE) {
+      toast.error(`Maksimal ${MAX_BULK_DELETE} rule per sekali hapus (terpilih ${ids.length}).`);
+      return;
+    }
+    if (!window.confirm(`Hapus ${ids.length} rule terpilih? Tindakan ini tidak bisa dibatalkan.`)) return;
+
+    setBulkDeleting(true);
+    try {
+      const res = await apiClient.post('/rules/bulk-delete', { ids });
+      const result = res.data as BulkDeleteResult;
+      if (result.deleted < result.requested) {
+        toast(`${result.deleted} rule dihapus, ${result.requested - result.deleted} sudah tidak ada.`, { icon: '⚠️' });
+      } else {
+        toast.success(`${result.deleted} rule dihapus.`);
+      }
+      clearSelection();
+      fetchData();
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { status: number; data?: { error?: string } } };
+      if (axiosError?.response?.status === 403) {
+        toast.error('Anda tidak punya akses (Admin only).');
+      } else {
+        toast.error(axiosError?.response?.data?.error || 'Gagal menghapus rules.');
+      }
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -354,6 +434,51 @@ const Rules: React.FC = () => {
         </div>
       </div>
 
+      {/* Bulk action bar */}
+      {isAdmin && selectedCount > 0 && (
+        <div className="sticky top-4 z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-4 bg-card border border-indigo-500/40 rounded-2xl shadow-xl shadow-indigo-600/10 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-3">
+            <span className="w-9 h-9 shrink-0 bg-indigo-500/10 text-indigo-500 rounded-xl flex items-center justify-center font-black text-xs ring-1 ring-indigo-500/20">
+              {selectedCount}
+            </span>
+            <div>
+              <p className="font-black text-sm tracking-tight">
+                {selectedCount} rule terpilih
+              </p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                {allFilteredSelected ? 'Semua hasil filter terpilih' : `Dari ${filteredRules.length} rule tampil`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleSelectAllFiltered}
+              className="px-4 py-2.5 bg-muted hover:bg-border text-foreground rounded-xl font-black text-[10px] uppercase tracking-widest transition-all"
+            >
+              {allFilteredSelected ? 'Batal pilih semua' : 'Pilih semua tampil'}
+            </button>
+            <button
+              onClick={clearSelection}
+              className="px-4 py-2.5 bg-muted hover:bg-border text-foreground rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-1.5"
+            >
+              <X size={14} />
+              Bersihkan
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-rose-600/20 flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {bulkDeleting
+                ? <RefreshCcw size={14} className="animate-spin" />
+                : <Trash2 size={14} />}
+              {bulkDeleting ? 'Menghapus...' : `Hapus ${selectedCount}`}
+            </button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="py-20 flex flex-col items-center justify-center text-muted-foreground space-y-4">
           <RefreshCcw size={40} className="animate-spin text-indigo-500" />
@@ -373,6 +498,18 @@ const Rules: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-muted/50 border-b border-border">
+                  {isAdmin && (
+                    <th className="pl-6 pr-2 py-5 w-12">
+                      <input
+                        type="checkbox"
+                        checked={allFilteredSelected}
+                        onChange={toggleSelectAllFiltered}
+                        aria-label="Pilih semua rule yang tampil"
+                        title="Pilih semua rule yang tampil"
+                        className="w-4 h-4 rounded accent-indigo-600 cursor-pointer align-middle"
+                      />
+                    </th>
+                  )}
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Identity</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Keyword Logic</th>
@@ -383,7 +520,21 @@ const Rules: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-border">
                 {filteredRules.map((rule) => (
-                  <tr key={rule.ID} className="hover:bg-muted/30 transition-colors group">
+                  <tr
+                    key={rule.ID}
+                    className={`transition-colors group ${selectedIds.has(rule.ID) ? 'bg-indigo-500/5' : 'hover:bg-muted/30'}`}
+                  >
+                    {isAdmin && (
+                      <td className="pl-6 pr-2 py-5">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(rule.ID)}
+                          onChange={() => toggleSelect(rule.ID)}
+                          aria-label={`Pilih rule ${rule.ID}`}
+                          className="w-4 h-4 rounded accent-indigo-600 cursor-pointer align-middle"
+                        />
+                      </td>
+                    )}
                     <td className="px-6 py-5">
                       {rule.is_active ? (
                         <div className="flex items-center gap-2 text-emerald-500">
@@ -460,13 +611,29 @@ const Rules: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredRules.map((rule) => (
-            <div key={rule.ID} className="bg-card border border-border rounded-[2rem] p-8 hover:border-indigo-500/30 transition-all group relative overflow-hidden">
+            <div
+              key={rule.ID}
+              className={`bg-card border rounded-[2rem] p-8 transition-all group relative overflow-hidden ${
+                selectedIds.has(rule.ID)
+                  ? 'border-indigo-500 ring-2 ring-indigo-500/20'
+                  : 'border-border hover:border-indigo-500/30'
+              }`}
+            >
               <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:scale-110 transition-transform">
                 <Settings size={80} />
               </div>
               
               <div className="flex justify-between items-start mb-6 relative z-10">
                 <div className="flex items-center gap-3">
+                  {isAdmin && (
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(rule.ID)}
+                      onChange={() => toggleSelect(rule.ID)}
+                      aria-label={`Pilih rule ${rule.ID}`}
+                      className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
+                    />
+                  )}
                   <div className={`w-3 h-3 rounded-full ${rule.is_active ? 'bg-emerald-500' : 'bg-rose-500'} animate-pulse`} />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em]">RULE-{rule.ID}</span>
                 </div>

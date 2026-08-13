@@ -45,6 +45,11 @@ export interface ImportResult {
   errors: ImportRowError[] | null;
 }
 
+export interface BulkDeleteResult {
+  deleted: number;
+  requested: number;
+}
+
 export type BotStatus = 'IDLE' | 'WAITING_OTP' | 'RUNNING';
 
 export interface AuthResponse {
