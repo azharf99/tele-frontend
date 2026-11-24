@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeProvider';
-import { 
-  LayoutDashboard, 
-  List, 
-  LogOut, 
-  Menu, 
+import {
+  LayoutDashboard,
+  GraduationCap,
+  LogOut,
+  Menu,
   Bot,
   ChevronRight,
   UserCog,
@@ -63,19 +63,19 @@ const Layout: React.FC = () => {
               onClick={() => setIsSidebarOpen(false)}
             >
               <LayoutDashboard size={20} />
-              <span className="font-semibold">Console</span>
+              <span className="font-semibold">Devices & Console</span>
               <ChevronRight size={14} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
             </NavLink>
             <NavLink 
-              to="/dashboard/rules" 
+              to="/dashboard/auction" 
               className={({ isActive }) => `
                 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
                 ${isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}
               `}
               onClick={() => setIsSidebarOpen(false)}
             >
-              <List size={20} />
-              <span className="font-semibold">Bid Rules</span>
+              <GraduationCap size={20} />
+              <span className="font-semibold">Lelang Kelas</span>
               <ChevronRight size={14} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
             </NavLink>
             <NavLink 

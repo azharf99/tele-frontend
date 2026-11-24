@@ -1,217 +1,209 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../api/client';
+import type { TelegramAccount } from '../types';
 import toast from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
-import { 
-  Bot, 
-  Save, 
-  Sparkles, 
-  Info, 
-  Clock, 
-  MessageSquare,
+import {
+  Save,
+  Sparkles,
+  Clock,
   AlertCircle,
-  Cpu,
-  Zap,
-  ShieldCheck,
   Terminal,
-  BrainCircuit,
-  Settings2,
-  RefreshCcw
+  RefreshCcw,
+  Smartphone,
 } from 'lucide-react';
 
 const AISettings: React.FC = () => {
   const [systemPrompt, setSystemPrompt] = useState('');
+  const [accounts, setAccounts] = useState<TelegramAccount[]>([]);
+  const [accountPrompts, setAccountPrompts] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [savingGlobal, setSavingGlobal] = useState(false);
+  const [savingAccId, setSavingAccId] = useState<number | null>(null);
   const { isAdmin } = useAuth();
 
-  const fetchAIContext = async () => {
-    setLoading(true);
-    try {
-      const response = await apiClient.get('/ai/context?key=system_prompt');
-      setSystemPrompt(response.data.value || '');
-    } catch (error) {
-      console.error('Failed to fetch AI context', error);
-      toast.error('Gagal mengambil data konteks AI.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (isAdmin) {
-      fetchAIContext();
-    }
+    if (!isAdmin) return;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [ctxRes, accRes] = await Promise.all([
+          apiClient.get('/ai/context?key=system_prompt').catch(() => ({ data: { value: '' } })),
+          apiClient.get<TelegramAccount[]>('/accounts'),
+        ]);
+        setSystemPrompt(ctxRes.data?.value || '');
+        const list = accRes.data ?? [];
+        setAccounts(list);
+        const promptMap: Record<number, string> = {};
+        list.forEach((a) => {
+          promptMap[a.id] = a.ai_system_prompt || '';
+        });
+        setAccountPrompts(promptMap);
+      } catch {
+        toast.error('Gagal mengambil pengaturan AI.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
   }, [isAdmin]);
 
-  const handleSave = async () => {
-    setSaving(true);
+  const handleSaveGlobal = async () => {
+    setSavingGlobal(true);
     try {
       await apiClient.post('/ai/context', {
         key: 'system_prompt',
-        value: systemPrompt
+        value: systemPrompt,
       });
-      toast.success('AI Personality Updated.');
-    } catch (error) {
-      console.error('Failed to save AI context', error);
-      toast.error('Failed to sync AI context.');
+      toast.success('Global System Prompt diperbarui.');
+    } catch {
+      toast.error('Gagal menyimpan Global System Prompt.');
     } finally {
-      setSaving(false);
+      setSavingGlobal(false);
+    }
+  };
+
+  const handleSaveAccountPrompt = async (acc: TelegramAccount) => {
+    setSavingAccId(acc.id);
+    try {
+      await apiClient.put(`/accounts/${acc.id}`, {
+        ai_system_prompt: accountPrompts[acc.id] ?? '',
+      });
+      toast.success(`Prompt khusus untuk ${acc.name} disimpan.`);
+    } catch {
+      toast.error('Gagal menyimpan prompt akun.');
+    } finally {
+      setSavingAccId(null);
     }
   };
 
   if (!isAdmin) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-8 animate-in fade-in duration-700">
-        <div className="w-24 h-24 bg-rose-500/10 text-rose-500 rounded-[2rem] flex items-center justify-center ring-1 ring-rose-500/20">
-          <AlertCircle size={48} />
-        </div>
-        <div>
-          <h1 className="text-3xl font-black tracking-tight mb-2">Access Restricted</h1>
-          <p className="text-muted-foreground max-w-md font-medium">Only higher-level administrators can modify neural network parameters and AI response logic.</p>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-4">
+        <AlertCircle size={40} className="text-rose-500" />
+        <h1 className="text-2xl font-black">Access Restricted</h1>
+        <p className="text-sm text-muted-foreground">Hanya Admin yang dapat mengubah konfigurasi AI Assistant.</p>
       </div>
     );
   }
 
+  const aiAccounts = accounts.filter((a) => a.enable_ai_gateway);
+
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black tracking-tight mb-2 text-foreground">AI Nexus Configuration</h1>
-          <p className="text-muted-foreground font-medium">Define the core personality and instructional protocols for the Gemini neural model.</p>
+          <h1 className="text-4xl font-black tracking-tight mb-2">AI Assistant Settings</h1>
+          <p className="text-muted-foreground font-medium">
+            Atur default system prompt global dan override prompt khusus per akun Telegram B2B (Private DM, 60s debounce).
+          </p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
-          <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
-          <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Model: Gemini 2.0 Pro</span>
-        </div>
+        <span className="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-[10px] font-black text-indigo-400 uppercase tracking-widest w-fit">
+          Model: gemini-3.1-flash-lite
+        </span>
       </header>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="xl:col-span-2 space-y-8">
-          {/* Main Prompt Card */}
-          <div className="bg-card glass rounded-[3rem] p-10 border border-border relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:scale-110 transition-transform duration-1000">
-              <BrainCircuit size={200} />
-            </div>
-            
-            <div className="flex items-center gap-4 mb-10 relative z-10">
-              <div className="w-14 h-14 bg-indigo-500/10 rounded-[1.25rem] flex items-center justify-center text-indigo-500 ring-1 ring-indigo-500/20">
-                <Sparkles size={28} />
+      {loading ? (
+        <div className="py-20 text-center">
+          <RefreshCcw size={32} className="animate-spin text-indigo-500 mx-auto" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          <div className="xl:col-span-2 space-y-8">
+            {/* Global System Prompt */}
+            <div className="bg-card border border-border rounded-[2.5rem] p-8 space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 bg-indigo-500/10 text-indigo-500 rounded-xl flex items-center justify-center">
+                  <Sparkles size={22} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black">Global Default System Prompt</h2>
+                  <p className="text-xs text-muted-foreground">Dipakai oleh semua akun AI DM yang tidak mengatur override prompt khusus.</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-2xl font-black uppercase tracking-tight">System Personality</h2>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Neural Instruction Set</p>
+
+              <div className="relative">
+                <Terminal size={16} className="absolute top-4 left-4 text-indigo-500/50" />
+                <textarea
+                  value={systemPrompt}
+                  onChange={(e) => setSystemPrompt(e.target.value)}
+                  rows={10}
+                  className="w-full pl-11 pr-5 py-4 bg-muted border border-border rounded-2xl font-mono text-sm outline-none focus:border-indigo-500"
+                  placeholder="Tulis instruksi asisten AI untuk membalas DM..."
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSaveGlobal}
+                  disabled={savingGlobal}
+                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 disabled:opacity-50"
+                >
+                  <Save size={16} />
+                  {savingGlobal ? 'Menyimpan...' : 'Simpan Global Prompt'}
+                </button>
               </div>
             </div>
 
-            {loading ? (
-              <div className="h-96 flex flex-col items-center justify-center space-y-4">
-                <Cpu size={48} className="animate-spin text-indigo-500" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Streaming Context...</p>
-              </div>
-            ) : (
-              <div className="space-y-8 relative z-10">
-                <div className="relative group/input">
-                  <div className="absolute top-4 left-4 text-indigo-500/50">
-                    <Terminal size={18} />
-                  </div>
-                  <textarea
-                    value={systemPrompt}
-                    onChange={(e) => setSystemPrompt(e.target.value)}
-                    className="w-full h-[450px] pl-12 pr-6 py-6 bg-muted border border-border rounded-[2rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all duration-300 font-mono text-sm leading-relaxed"
-                    placeholder="Initialize neural personality here..."
-                  />
-                  <div className="absolute bottom-4 right-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                    <Settings2 size={12} />
-                    Context Length: {systemPrompt.length} tokens
-                  </div>
+            {/* Per-Account Overrides */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-black">Override Prompt per Akun AI DM ({aiAccounts.length})</h3>
+              {aiAccounts.length === 0 ? (
+                <div className="p-8 bg-card border border-border border-dashed rounded-3xl text-sm text-muted-foreground text-center">
+                  Belum ada akun dengan toggle <strong>AI Assistant (Private DM)</strong> aktif. Aktifkan dari halaman Devices & Console.
                 </div>
-                
-                <div className="flex justify-end">
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 px-12 rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center gap-3 active:scale-[0.98] disabled:opacity-60 group/btn"
-                  >
-                    {saving ? <RefreshCcw size={20} className="animate-spin" /> : <Save size={20} className="group-hover:scale-110 transition-transform" />}
-                    <span className="uppercase tracking-widest text-sm">Commit to Neural Core</span>
-                  </button>
-                </div>
-              </div>
-            )}
+              ) : (
+                aiAccounts.map((acc) => (
+                  <div key={acc.id} className="bg-card border border-border rounded-3xl p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Smartphone size={18} className="text-purple-400" />
+                        <div>
+                          <p className="font-black text-sm">{acc.name}</p>
+                          <p className="text-xs font-mono text-muted-foreground">{acc.phone_number}</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
+                        Kosong = pakai Global
+                      </span>
+                    </div>
+                    <textarea
+                      rows={4}
+                      value={accountPrompts[acc.id] ?? ''}
+                      onChange={(e) => setAccountPrompts((p) => ({ ...p, [acc.id]: e.target.value }))}
+                      placeholder="Override prompt khusus untuk akun ini (opsional)..."
+                      className="w-full p-4 bg-muted border border-border rounded-2xl font-mono text-xs outline-none focus:border-indigo-500"
+                    />
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => handleSaveAccountPrompt(acc)}
+                        disabled={savingAccId === acc.id}
+                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <Save size={14} />
+                        {savingAccId === acc.id ? 'Menyimpan...' : 'Simpan Prompt Akun'}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
-          {/* Info Card */}
-          <div className="bg-indigo-600 rounded-[2.5rem] p-10 text-white relative overflow-hidden group shadow-2xl shadow-indigo-600/20">
-            <div className="absolute top-0 right-0 p-8 opacity-20 transform group-hover:rotate-12 transition-transform duration-700">
-              <Info size={120} />
-            </div>
-            <div className="relative z-10 flex gap-6">
-              <div className="bg-white/10 p-4 rounded-2xl h-fit border border-white/10 backdrop-blur-md">
-                <Zap size={24} />
+          <div className="space-y-6">
+            <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white border border-white/10 space-y-5">
+              <div className="flex items-center gap-2 text-indigo-400">
+                <Clock size={20} />
+                <h3 className="font-black uppercase tracking-tight">Pipeline AI DM</h3>
               </div>
-              <div>
-                <h3 className="text-xl font-black uppercase tracking-tight mb-3">Contextual Engineering</h3>
-                <p className="text-indigo-100 font-medium leading-relaxed max-w-2xl">
-                  Provide specific directives regarding business identity, operational protocols, and preferred linguistic tone. 
-                  The neural core will utilize this instruction set to autonomously orchestrate all incoming communications.
-                </p>
-              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Antrean debounce (60 detik, maksimal 10 pesan per batch) sekarang terisolasi per pasangan <code>(account_id, sender_id)</code>.
+                Akun khusus Lelang Kelas dengan AI DM nonaktif tidak akan pernah membalas DM secara otomatis.
+              </p>
             </div>
           </div>
         </div>
-
-        {/* Sidebar Cards */}
-        <div className="space-y-8">
-          <div className="bg-slate-900 rounded-[2.5rem] p-10 shadow-2xl shadow-indigo-900/20 text-white border-b-8 border-indigo-500">
-            <div className="flex items-center gap-3 mb-10">
-              <div className="bg-slate-800 p-2.5 rounded-xl text-indigo-400">
-                <Clock size={22} />
-              </div>
-              <h2 className="text-xl font-black tracking-tight uppercase">Stream Pipeline</h2>
-            </div>
-            
-            <div className="space-y-8">
-              <div className="flex gap-4">
-                <div className="w-1.5 h-auto bg-gradient-to-b from-indigo-500 to-transparent rounded-full" />
-                <div>
-                  <p className="text-sm font-black uppercase tracking-widest text-indigo-400 mb-1">Debounce Protocol</p>
-                  <p className="text-xs text-slate-400 leading-relaxed">System introduces a 60-second latency buffer post-message to ensure full conversational capture.</p>
-                </div>
-              </div>
-              
-              <div className="flex gap-4">
-                <div className="w-1.5 h-auto bg-gradient-to-b from-emerald-500 to-transparent rounded-full" />
-                <div>
-                  <p className="text-sm font-black uppercase tracking-widest text-emerald-400 mb-1">Batch Serialization</p>
-                  <p className="text-xs text-slate-400 leading-relaxed">Automated ingestion of up to 10 historical entries to maximize contextual accuracy.</p>
-                </div>
-              </div>
-
-              <div className="pt-8 border-t border-slate-800">
-                <div className="flex items-center gap-2 text-indigo-400 mb-3">
-                  <MessageSquare size={16} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Execution Channel</span>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-white/5">
-                  <span className="text-xs font-bold">Secure Private DM</span>
-                  <ShieldCheck size={16} className="text-emerald-500" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-card border border-border rounded-[2.5rem] p-8 text-center relative overflow-hidden group">
-            <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="w-16 h-16 bg-muted rounded-[1.25rem] flex items-center justify-center text-muted-foreground mx-auto mb-6 group-hover:scale-110 transition-transform">
-              <Bot size={32} />
-            </div>
-            <h4 className="font-black text-foreground uppercase tracking-tight">Gemini 1.5 Flash</h4>
-            <p className="text-[10px] text-muted-foreground mt-2 font-black uppercase tracking-widest">High-Efficiency Protocol Enabled</p>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

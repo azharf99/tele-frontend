@@ -1,22 +1,25 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import apiClient from '../api/client';
-import type { TelegramGroup, TopicInfo } from '../types';
+import type { TelegramAccount, TelegramGroup, TopicInfo } from '../types';
 import toast from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
-import { 
-  Copy, 
-  RefreshCcw, 
-  Search, 
-  Hash, 
-  Globe, 
-  ChevronRight, 
+import {
+  Copy,
+  RefreshCcw,
+  Search,
+  Hash,
+  Globe,
+  ChevronRight,
   Layers,
   Info,
   ShieldCheck,
-  Bot
+  Bot,
+  Smartphone,
 } from 'lucide-react';
 
 const Groups: React.FC = () => {
+  const [accounts, setAccounts] = useState<TelegramAccount[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
   const [groups, setGroups] = useState<TelegramGroup[]>([]);
   const [topics, setTopics] = useState<TopicInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,32 +30,59 @@ const Groups: React.FC = () => {
   const { isAdmin } = useAuth();
 
   const selectedGroup = useMemo(
-    () => groups.find((group) => group.id === selectedGroupId),
+    () => groups.find((group) => String(group.id) === selectedGroupId),
     [groups, selectedGroupId]
   );
 
-  const fetchGroups = async () => {
+  const fetchGroups = useCallback(async (accountId: number) => {
     setLoading(true);
     try {
-      const response = await apiClient.get('/groups');
-      setGroups(response.data);
+      const response = await apiClient.get<TelegramGroup[]>(`/accounts/${accountId}/groups`);
+      setGroups(response.data ?? []);
     } catch {
       toast.error('Gagal memuat daftar group.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchTopics = async (groupId: string) => {
+  useEffect(() => {
+    const loadAccounts = async () => {
+      try {
+        const res = await apiClient.get<TelegramAccount[]>('/accounts');
+        const list = res.data ?? [];
+        setAccounts(list);
+        if (list.length > 0) {
+          setSelectedAccountId(list[0].id);
+        } else {
+          setLoading(false);
+        }
+      } catch {
+        toast.error('Gagal memuat daftar akun Telegram.');
+        setLoading(false);
+      }
+    };
+    loadAccounts();
+  }, []);
+
+  useEffect(() => {
+    if (selectedAccountId !== null) {
+      setSelectedGroupId('');
+      setTopics([]);
+      fetchGroups(selectedAccountId);
+    }
+  }, [selectedAccountId, fetchGroups]);
+
+  const fetchTopics = async (accountId: number, groupId: string) => {
     setTopicsLoading(true);
     try {
-      const response = await apiClient.get(`/groups/${groupId}/topics`);
+      const response = await apiClient.get<TopicInfo[]>(`/accounts/${accountId}/groups/${groupId}/topics`);
       setTopics(response.data ?? []);
     } catch (error: unknown) {
       setTopics([]);
-      const axiosError = error as { response?: { status: number } };
-      if (axiosError?.response?.status === 500) {
-        toast.error('Bot belum running. Selesaikan OTP dulu.');
+      const status = (error as { response?: { status: number } })?.response?.status;
+      if (status === 503) {
+        toast.error('Akun belum RUNNING. Selesaikan OTP/Start dulu.');
       } else {
         toast.error('Gagal memuat topics.');
       }
@@ -61,229 +91,199 @@ const Groups: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchGroups();
-  }, []);
-
   const handleSync = async () => {
+    if (selectedAccountId === null) return;
     setSyncing(true);
     try {
-      await apiClient.post('/groups/sync');
-      toast.success('Sync success.');
-      await fetchGroups();
+      await apiClient.post(`/accounts/${selectedAccountId}/groups/sync`);
+      toast.success('Sync grup selesai.');
+      await fetchGroups(selectedAccountId);
     } catch (error: unknown) {
-      const axiosError = error as { response?: { status: number } };
-      if (axiosError?.response?.status === 403) {
-        toast.error('Akses ditolak.');
-        return;
-      }
-      toast.error('Sync failed.');
+      const msg = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      toast.error(msg || 'Sync gagal.');
     } finally {
       setSyncing(false);
     }
   };
 
   const handleSelectGroup = async (group: TelegramGroup) => {
-    setSelectedGroupId(group.id);
-    if (group.type !== 'supergroup') {
+    const gid = String(group.id);
+    setSelectedGroupId(gid);
+    if (group.type !== 'supergroup' || selectedAccountId === null) {
       setTopics([]);
       return;
     }
-    await fetchTopics(group.id);
+    await fetchTopics(selectedAccountId, gid);
   };
 
   const copyToClipboard = async (value: string | number, label: string) => {
     try {
       await navigator.clipboard.writeText(String(value));
-      toast.success(`${label} copied.`);
+      toast.success(`${label} disalin.`);
     } catch {
-      toast.error(`Failed to copy.`);
+      toast.error('Gagal menyalin.');
     }
   };
 
   const filteredGroups = groups.filter(
     (group) =>
-      group.title.toLowerCase().includes(searchTerm.toLowerCase()) || group.id.includes(searchTerm)
+      group.title.toLowerCase().includes(searchTerm.toLowerCase()) || String(group.id).includes(searchTerm)
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-8 animate-in fade-in duration-500">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black tracking-tight mb-2">Group Explorer</h1>
-          <p className="text-muted-foreground font-medium">Investigate and monitor connected Telegram infrastructure.</p>
+          <p className="text-muted-foreground font-medium">Jelajahi grup & forum topic untuk tiap akun Telegram yang terhubung.</p>
         </div>
-        {isAdmin && (
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2 group"
-          >
-            <RefreshCcw size={18} className={syncing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'} />
-            <span>{syncing ? 'Syncing...' : 'Sync Groups'}</span>
-          </button>
-        )}
+
+        <div className="flex flex-wrap items-center gap-3">
+          {accounts.length > 0 && (
+            <div className="flex items-center gap-2 bg-card border border-border rounded-2xl px-4 py-2">
+              <Smartphone size={16} className="text-indigo-500" />
+              <select
+                value={selectedAccountId ?? ''}
+                onChange={(e) => setSelectedAccountId(Number(e.target.value))}
+                className="bg-transparent text-sm font-bold outline-none"
+              >
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id} className="bg-slate-900 text-white">
+                    {acc.name} ({acc.status})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {isAdmin && selectedAccountId !== null && (
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2"
+            >
+              <RefreshCcw size={16} className={syncing ? 'animate-spin' : ''} />
+              <span>{syncing ? 'Syncing...' : 'Sync Groups'}</span>
+            </button>
+          )}
+        </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
-        {/* Left Column: Group List */}
-        <div className="lg:col-span-5 xl:col-span-4 space-y-6">
-          <div className="relative group">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Search nodes..." 
-              className="w-full pl-12 pr-4 py-4 bg-card border border-border rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-sm"
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-5 xl:col-span-4 space-y-5">
+          <div className="relative">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Cari grup atau ID..."
+              className="w-full pl-12 pr-4 py-3.5 bg-card border border-border rounded-2xl outline-none focus:border-indigo-500 font-bold text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <div className="bg-card border border-border rounded-[2.5rem] overflow-hidden flex flex-col max-h-[600px]">
+          <div className="bg-card border border-border rounded-[2rem] overflow-hidden flex flex-col max-h-[600px]">
             <div className="p-4 bg-muted/30 border-b border-border text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              Connected Clusters ({filteredGroups.length})
+              Grup Terdeteksi ({filteredGroups.length})
             </div>
             <div className="overflow-y-auto flex-1 divide-y divide-border">
               {loading ? (
                 <div className="p-12 text-center space-y-3">
-                  <RefreshCcw size={32} className="animate-spin text-indigo-500 mx-auto" />
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Scanning Network...</p>
+                  <RefreshCcw size={28} className="animate-spin text-indigo-500 mx-auto" />
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Memuat Grup...</p>
                 </div>
               ) : filteredGroups.length === 0 ? (
-                <div className="p-12 text-center text-muted-foreground">
-                  <p className="font-bold text-sm italic">No nodes detected.</p>
+                <div className="p-12 text-center text-muted-foreground text-sm font-medium">
+                  Belum ada grup. Klik Sync Groups terlebih dahulu.
                 </div>
               ) : (
-                filteredGroups.map((group) => (
-                  <button
-                    key={group.id}
-                    onClick={() => handleSelectGroup(group)}
-                    className={`w-full text-left p-5 transition-all flex items-center gap-4 group/item ${
-                      selectedGroupId === group.id
-                        ? 'bg-indigo-600/5 dark:bg-indigo-600/10'
-                        : 'hover:bg-muted/50'
-                    }`}
-                  >
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors shrink-0 ${
-                      selectedGroupId === group.id
-                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                        : 'bg-muted text-muted-foreground group-hover/item:bg-indigo-100 group-hover/item:text-indigo-600'
-                    }`}>
-                      {group.type === 'supergroup' ? <Layers size={20} /> : <Globe size={20} />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className={`font-black text-sm truncate ${selectedGroupId === group.id ? 'text-indigo-600 dark:text-indigo-400' : ''}`}>{group.title}</p>
-                        <ChevronRight size={14} className={`transition-transform ${selectedGroupId === group.id ? 'translate-x-1 text-indigo-500' : 'opacity-0 group-hover/item:opacity-100'}`} />
+                filteredGroups.map((group) => {
+                  const gid = String(group.id);
+                  return (
+                    <button
+                      key={gid}
+                      onClick={() => handleSelectGroup(group)}
+                      className={`w-full text-left p-4 transition-all flex items-center gap-3 ${
+                        selectedGroupId === gid ? 'bg-indigo-600/10' : 'hover:bg-muted/50'
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                        selectedGroupId === gid ? 'bg-indigo-600 text-white' : 'bg-muted text-muted-foreground'
+                      }`}>
+                        {group.type === 'supergroup' ? <Layers size={18} /> : <Globe size={18} />}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{group.type}</span>
-                        <span className="text-[8px] font-mono text-muted-foreground truncate">{group.id}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className="font-bold text-sm truncate">{group.title}</p>
+                          <ChevronRight size={14} className="text-muted-foreground shrink-0" />
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[9px] font-black uppercase bg-muted px-2 py-0.5 rounded-full">{group.type}</span>
+                          <span className="text-[10px] font-mono text-muted-foreground truncate">{gid}</span>
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                ))
+                    </button>
+                  );
+                })
               )}
             </div>
           </div>
         </div>
 
-        {/* Right Column: Node Details */}
         <div className="lg:col-span-7 xl:col-span-8">
           {selectedGroup ? (
-            <div className="space-y-8 animate-in slide-in-from-right-4 duration-500">
-              {/* Header Info */}
-              <div className="bg-indigo-600 rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl shadow-indigo-600/20">
-                <div className="absolute top-0 right-0 p-12 opacity-10 transform rotate-12 scale-150">
-                  <Bot size={200} />
+            <div className="space-y-6">
+              <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-10">
+                  <Bot size={160} />
                 </div>
-                <div className="relative z-10">
-                  <div className="flex flex-wrap items-start justify-between gap-6 mb-10">
-                    <div className="space-y-2">
-                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full border border-white/10 text-[10px] font-black uppercase tracking-[0.2em]">
-                        <ShieldCheck size={12} />
-                        Identity Verified
-                      </div>
-                      <h2 className="text-4xl font-black tracking-tighter">{selectedGroup.title}</h2>
-                      <div className="flex items-center gap-3 font-mono text-sm text-indigo-100/70">
-                        <span>{selectedGroup.id}</span>
-                        <button 
-                          onClick={() => copyToClipboard(selectedGroup.id, 'Group ID')}
-                          className="p-1 hover:bg-white/10 rounded-md transition-colors"
-                        >
-                          <Copy size={14} />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/10">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 opacity-60">Status</p>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                        <span className="text-sm font-black uppercase tracking-widest">Connected</span>
-                      </div>
-                    </div>
+                <div className="relative z-10 space-y-3">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest">
+                    <ShieldCheck size={12} /> {selectedGroup.type}
                   </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                      <p className="text-[8px] font-black uppercase tracking-[0.2em] mb-1 opacity-50">Type</p>
-                      <p className="font-bold text-sm uppercase">{selectedGroup.type}</p>
-                    </div>
-                    <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                      <p className="text-[8px] font-black uppercase tracking-[0.2em] mb-1 opacity-50">Protocol</p>
-                      <p className="font-bold text-sm uppercase">MTProto v2.0</p>
-                    </div>
-                    <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                      <p className="text-[8px] font-black uppercase tracking-[0.2em] mb-1 opacity-50">Access Level</p>
-                      <p className="font-bold text-sm uppercase">{isAdmin ? 'FULL ADMIN' : 'RESTRICTED'}</p>
-                    </div>
+                  <h2 className="text-3xl font-black tracking-tight">{selectedGroup.title}</h2>
+                  <div className="flex items-center gap-2 font-mono text-sm text-indigo-100/80">
+                    <span>ID: {String(selectedGroup.id)}</span>
+                    <button onClick={() => copyToClipboard(selectedGroup.id, 'Group ID')} className="p-1 hover:bg-white/10 rounded">
+                      <Copy size={14} />
+                    </button>
                   </div>
                 </div>
               </div>
 
-              {/* Topics Section */}
-              <div className="space-y-6">
-                <div className="flex items-center justify-between px-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-500">
-                      <Hash size={20} />
-                    </div>
-                    <h3 className="text-xl font-black tracking-tight">Stream Partitions (Topics)</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Hash size={18} className="text-indigo-500" />
+                    <h3 className="text-lg font-black">Forum Topics</h3>
                   </div>
                   {topics.length > 0 && (
-                    <span className="bg-muted px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{topics.length} Detected</span>
+                    <span className="bg-muted px-3 py-1 rounded-full text-[10px] font-black uppercase">{topics.length} Topics</span>
                   )}
                 </div>
 
                 {selectedGroup.type !== 'supergroup' ? (
-                  <div className="p-12 bg-card border border-border border-dashed rounded-[2.5rem] text-center">
-                    <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center text-muted-foreground mx-auto mb-6">
-                      <Info size={32} />
-                    </div>
-                    <p className="text-sm font-bold text-muted-foreground max-w-xs mx-auto italic">This node is a standard group and does not support multi-stream partitioning (Topics).</p>
+                  <div className="p-10 bg-card border border-border border-dashed rounded-[2rem] text-center text-sm text-muted-foreground">
+                    <Info size={24} className="mx-auto mb-2" />
+                    Grup standar tidak mendukung Forum Topics (gunakan Topic ID = 0).
                   </div>
                 ) : topicsLoading ? (
-                  <div className="py-20 text-center space-y-4">
-                    <RefreshCcw size={32} className="animate-spin text-indigo-500 mx-auto" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Mapping Sub-streams...</p>
-                  </div>
-                ) : topics.length === 0 ? (
-                  <div className="p-12 bg-card border border-border border-dashed rounded-[2.5rem] text-center">
-                    <p className="text-sm font-bold text-muted-foreground italic">No active sub-streams (Topics) found for this cluster.</p>
+                  <div className="py-16 text-center">
+                    <RefreshCcw size={28} className="animate-spin text-indigo-500 mx-auto" />
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {topics.map((topic) => (
-                      <div key={topic.id} className="bg-card border border-border p-6 rounded-[2rem] hover:border-indigo-500/30 transition-all group/topic flex items-center justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-black text-sm mb-1 truncate group-hover/topic:text-indigo-500 transition-colors">{topic.title}</p>
-                          <p className="font-mono text-[10px] text-muted-foreground">ID: {topic.id}</p>
+                      <div key={topic.id} className="bg-card border border-border p-5 rounded-2xl flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-bold text-sm truncate">{topic.title}</p>
+                          <p className="font-mono text-xs text-muted-foreground">Topic ID: {topic.id}</p>
                         </div>
                         <button
                           onClick={() => copyToClipboard(topic.id, 'Topic ID')}
-                          className="w-10 h-10 bg-muted text-muted-foreground rounded-xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                          className="p-2.5 bg-muted hover:bg-indigo-600 hover:text-white rounded-xl transition-all"
                         >
-                          <Copy size={16} />
+                          <Copy size={15} />
                         </button>
                       </div>
                     ))}
@@ -292,12 +292,12 @@ const Groups: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="h-full min-h-[500px] bg-card border border-border border-dashed rounded-[3rem] flex flex-col items-center justify-center text-center px-10">
-              <div className="w-24 h-24 bg-muted rounded-[2.5rem] flex items-center justify-center text-muted-foreground mb-8">
-                <Globe size={48} className="animate-pulse" />
-              </div>
-              <h3 className="text-2xl font-black mb-3">No Node Selected</h3>
-              <p className="text-muted-foreground max-w-md font-medium">Initialize a session by selecting a cluster from the exploration terminal on the left to investigate its internal architecture.</p>
+            <div className="min-h-[420px] bg-card border border-border border-dashed rounded-[2.5rem] flex flex-col items-center justify-center text-center p-10">
+              <Globe size={40} className="text-muted-foreground mb-4" />
+              <h3 className="text-xl font-black mb-1">Pilih Grup</h3>
+              <p className="text-sm text-muted-foreground max-w-sm">
+                Pilih grup di sisi kiri untuk menyalin Group ID atau memeriksa daftar Forum Topic-nya.
+              </p>
             </div>
           )}
         </div>

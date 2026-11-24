@@ -6,7 +6,7 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Rules from './pages/Rules';
+import ClassAuction from './pages/ClassAuction';
 import Groups from './pages/Groups';
 import Profile from './pages/Profile';
 import AISettings from './pages/AISettings';
@@ -30,13 +30,13 @@ function App() {
               }
             >
               <Route index element={<Dashboard />} />
-              <Route path="rules" element={<Rules />} />
+              <Route path="auction" element={<ClassAuction />} />
+              <Route path="rules" element={<Navigate to="/dashboard/auction" replace />} />
               <Route path="groups" element={<Groups />} />
               <Route path="users" element={<Users />} />
               <Route path="ai-settings" element={<AISettings />} />
               <Route path="profile" element={<Profile />} />
             </Route>
-            {/* Redirect old home to dashboard if authenticated, or keep as Home */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
