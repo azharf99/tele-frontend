@@ -98,6 +98,7 @@ export interface ClassAuctionProfile {
   min_delay_ms: number;
   max_delay_ms: number;
   slot_cooldown_sec: number;
+  auto_mark_won_on_bid: boolean;
   enable_ai_fallback: boolean;
   ignore_replies: boolean;
   stop_keywords: string;

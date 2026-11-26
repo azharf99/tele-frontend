@@ -218,9 +218,16 @@ const ClassAuction: React.FC = () => {
 
   const handleMarkOutcome = async (logId: number, outcome: AuctionOutcome) => {
     if (selectedAccountId === null) return;
+    const prev = logs.find((l) => l.id === logId);
     try {
       await apiClient.post(`/accounts/${selectedAccountId}/auction/logs/${logId}/outcome`, { outcome });
-      toast.success(outcome === 'WON' ? 'Ditandai MENANG & jadwal otomatis terpotong!' : 'Ditandai kalah.');
+      if (outcome === 'WON') {
+        toast.success('Ditandai MENANG & jadwal otomatis terpotong!');
+      } else if (prev?.outcome === 'WON') {
+        toast.success('Ditandai kalah & slot jadwal dikembalikan!');
+      } else {
+        toast.success('Ditandai kalah.');
+      }
       await Promise.all([
         loadLogs(selectedAccountId, decisionFilter),
         loadAccountData(selectedAccountId),

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { AuctionLog, AuctionOutcome } from '../../types';
-import { CheckCircle2, Clock, RefreshCcw, Trophy, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle2, Clock, RefreshCcw, RotateCcw, Trophy, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface LogsTabProps {
   logs: AuctionLog[];
@@ -52,7 +52,7 @@ const LogsTab: React.FC<LogsTabProps> = ({
         <div>
           <h3 className="text-xl font-black">Riwayat Lelang ({total})</h3>
           <p className="text-xs text-muted-foreground">
-            Klik <strong>Tandai Menang</strong> bila kamu memenangkan kelas — jadwal kosongmu akan otomatis terpotong (atau diblokir di tanggal OTR/CU).
+            Saat fitur otomatis menang aktif, jadwal langsung terpotong begitu bid terkirim. Jika ternyata kelas tidak didapat/dibatalkan, klik <strong>Kalah / Kembalikan Jadwal</strong> untuk membuka slot kembali.
           </p>
         </div>
 
@@ -96,6 +96,10 @@ const LogsTab: React.FC<LogsTabProps> = ({
               isAdmin &&
               (item.decision === 'BID_SENT' || item.decision === 'DRY_RUN_MATCH') &&
               item.outcome === 'PENDING';
+            const canRevertWon =
+              isAdmin &&
+              (item.decision === 'BID_SENT' || item.decision === 'DRY_RUN_MATCH') &&
+              item.outcome === 'WON';
 
             return (
               <div key={item.id} className="bg-muted/30 border border-border rounded-2xl p-5 space-y-3">
@@ -179,6 +183,17 @@ const LogsTab: React.FC<LogsTabProps> = ({
                         <XCircle size={13} /> Kalah
                       </button>
                     </div>
+                  )}
+
+                  {canRevertWon && (
+                    <button
+                      type="button"
+                      disabled={busyLogId === item.id}
+                      onClick={() => handleOutcome(item.id, 'LOST')}
+                      className="px-3.5 py-2 bg-amber-500/15 hover:bg-rose-500/20 text-amber-500 hover:text-rose-400 rounded-xl font-black text-[10px] uppercase tracking-wider flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                    >
+                      <RotateCcw size={13} /> Kalah / Kembalikan Jadwal
+                    </button>
                   )}
                 </div>
 

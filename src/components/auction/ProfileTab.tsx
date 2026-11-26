@@ -462,6 +462,22 @@ const ProfileTab: React.FC<ProfileTabProps> = ({
 
           <div className="space-y-3 pt-2 border-t border-border">
             <label className="flex items-center justify-between gap-3 cursor-pointer">
+              <div>
+                <p className="text-xs font-bold text-emerald-500">Otomatis Tandai Menang & Potong Jadwal (Anti Double-Book)</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Begitu bid live terkirim, slot langsung direservasi & dipotong otomatis agar 2 CS di jadwal sama/beririsan tidak ikut dibid. Bisa dikembalikan 1-klik di Riwayat jika kalah.
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                disabled={!isAdmin}
+                checked={profile.auto_mark_won_on_bid}
+                onChange={(e) => onChange({ ...profile, auto_mark_won_on_bid: e.target.checked })}
+                className="w-4 h-4 accent-emerald-600 shrink-0"
+              />
+            </label>
+
+            <label className="flex items-center justify-between gap-3 cursor-pointer">
               <div className="flex items-center gap-2">
                 <Sparkles size={15} className="text-purple-400" />
                 <div>

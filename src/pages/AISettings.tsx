@@ -99,7 +99,7 @@ const AISettings: React.FC = () => {
           </p>
         </div>
         <span className="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-[10px] font-black text-indigo-400 uppercase tracking-widest w-fit">
-          Model: gemini-3.1-flash-lite
+          Model: gemini-3.5-flash-lite
         </span>
       </header>
 
